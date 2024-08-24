@@ -1,7 +1,6 @@
 use crate::consts::{MIN_SAVE_LEN, SAVE_BLOCK_SIZE, SAVE_CHECKSUM_END};
 use crate::error::SaveError;
 use std::fs;
-use std::io::Read;
 use std::path::Path;
 
 #[derive(Debug)]
@@ -39,13 +38,13 @@ impl SkySave {
             return Err(SaveError::InvalidChecksum {
                 block: 0,
                 expected: block0,
-                actual: calc,
+                found: calc,
             });
         } else if calc != block1 {
             return Err(SaveError::InvalidChecksum {
                 block: 1,
                 expected: block1,
-                actual: calc,
+                found: calc,
             });
         }
 

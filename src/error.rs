@@ -13,10 +13,10 @@ pub enum SaveError {
     #[error("File size must be at least 128Kib.")]
     InvalidSize,
 
-    #[error("Invalid save checksum in block {block:?}:\nCalculated {calc:?}, Read {read:?}.")]
+    #[error("Invalid save checksum in block {block:?}:\nExpected: {expected:?}, Found: {found:?}.")]
     InvalidChecksum {
         block: u8,
         expected: [u8; 4],
-        actual: [u8; 4],
+        found: [u8; 4],
     },
 }
