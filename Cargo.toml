@@ -1,0 +1,10 @@
+[package]
+name = "sky-save"
+version = "0.0.0"
+edition = "2021"
+description = "A save file editor for Pokemon Mystery Dungeon - Explorers of Sky."
+repository = "https://github.com/AregevDev/sky-save"
+license = "Apache-2.0"
+readme = "README.md"
+
+[dependencies]
