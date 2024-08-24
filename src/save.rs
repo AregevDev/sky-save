@@ -24,8 +24,7 @@ impl SkySave {
         // 0xB6A isn't divisible by 4. We end up with a reminder of 2 bytes and need to count for them.
         let chk = self.data[4..SAVE_CHECKSUM_END + 2]
             .chunks(4)
-            .enumerate()
-            .map(|chunk| u32::from_le_bytes(chunk.1.try_into().unwrap()))
+            .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
             .fold(0u64, |acc, u| acc + u as u64) as u32;
 
         let calc = chk.to_le_bytes();
