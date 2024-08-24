@@ -10,6 +10,13 @@ pub struct SkySave {
 }
 
 impl SkySave {
+    /// Checks if the save data is valid by checking the data length and calculates the checksum.
+    /// This function is called when loading the save data from bytes.
+    /// The checksum is stored in bytes 0 to 3 and computed as follows:
+    /// - Convert every four bytes, from byte 4 to byte 46684, to unsigned 32-bit integers. And then sum them together.
+    /// - Truncate the result to a 32-bit integer.
+    /// - Convert the result to little-endian bytes.
+    /// - Compare with bytes 0 to 3 to check for validity.
     pub fn validate(&self) -> Result<(), SaveError> {
         if self.data.len() < MIN_SAVE_LEN {
             return Err(SaveError::InvalidSize);
@@ -45,6 +52,7 @@ impl SkySave {
         Ok(())
     }
 
+    /// Load save data a slice of bytes.
     pub fn from_slice(data: &[u8]) -> Result<Self, SaveError> {
         let res = SkySave {
             data: data.to_vec(),
@@ -54,6 +62,7 @@ impl SkySave {
         Ok(res)
     }
 
+    /// Loads save data from file.
     pub fn open<P: AsRef<Path>>(filename: P) -> Result<Self, SaveError> {
         let data = fs::read(filename).map_err(SaveError::Io)?;
         Self::from_slice(&data)
