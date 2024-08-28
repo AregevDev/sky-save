@@ -1,5 +1,10 @@
-use crate::consts::{MIN_SAVE_LEN, SAVE_BLOCK_SIZE, SAVE_CHECKSUM_END};
+use crate::consts::*;
+use crate::encoding::pmd_to_string;
 use crate::error::SaveError;
+use crate::EncodingError;
+use bitvec::field::BitField;
+use bitvec::order::Lsb0;
+use bitvec::view::BitView;
 use std::fs;
 use std::path::Path;
 
@@ -22,16 +27,17 @@ impl SkySave {
         }
 
         // 0xB6A isn't divisible by 4. We end up with a reminder of 2 bytes and need to count for them.
-        let chk = self.data[4..SAVE_CHECKSUM_END + 2]
+        let chk = self.data[PRIMARY_SAVE_START + 4..PRIMARY_SAVE_END]
             .chunks(4)
-            .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
+            .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap())) // Safe, four bytes.
             .fold(0u64, |acc, u| acc + u as u64) as u32;
 
         let calc = chk.to_le_bytes();
-        let block0: [u8; 4] = self.data[0..4].try_into().unwrap();
-        let block1: [u8; 4] = self.data[SAVE_BLOCK_SIZE..SAVE_BLOCK_SIZE + 4]
+        let block0: [u8; 4] = self.data[BACKUP_SAVE_START..BACKUP_SAVE_START + 4].try_into().unwrap(); // Safe, four bytes.
+        let block1: [u8; 4] = self.data
+            [BACKUP_SAVE_START..BACKUP_SAVE_START + 4]
             .try_into()
-            .unwrap(); // Safe, slice is always four bytes long.
+            .unwrap(); // Safe, four bytes.
 
         if calc != block0 {
             return Err(SaveError::InvalidChecksum {
@@ -64,5 +70,36 @@ impl SkySave {
     pub fn open<P: AsRef<Path>>(filename: P) -> Result<Self, SaveError> {
         let data = fs::read(filename).map_err(SaveError::Io)?;
         Self::from_slice(&data)
+    }
+
+    pub fn team_name(&self) -> Result<String, EncodingError> {
+        let bytes = &self.data[TEAM_NAME_START..TEAM_NAME_END];
+        pmd_to_string(bytes)
+    }
+
+    pub fn held_money(&self) -> u32 {
+        let bits = &self.data[HELD_MONEY_START..HELD_MONEY_END].view_bits::<Lsb0>()[6..30];
+        bits.load_le::<u32>()
+    }
+
+    pub fn sp_episode_held_money(&self) -> u32 {
+        let bits = &self.data[SP_EPISODE_HELD_MONEY_START..SP_EPISODE_HELD_MONEY_END]
+            .view_bits::<Lsb0>()[6..30];
+        bits.load_le::<u32>()
+    }
+
+    pub fn stored_money(&self) -> u32 {
+        let bits = &self.data[STORED_MONEY_START..STORED_MONEY_END].view_bits::<Lsb0>()[6..30];
+        bits.load_le::<u32>()
+    }
+
+    pub fn number_of_adventurers(&self) -> i32 {
+        let bytes = &self.data[NUMBER_OF_ADVENTURERS_START..NUMBER_OF_ADVENTURERS_END];
+        i32::from_le_bytes(bytes.try_into().unwrap()) // Safe, four bytes.
+    }
+
+    pub fn explorer_rank(&self) -> u32 {
+        let bytes = &self.data[EXPLORER_RANK_START..EXPLORER_RANK_END];
+        u32::from_le_bytes(bytes.try_into().unwrap()) // Safe, four bytes.
     }
 }

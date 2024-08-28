@@ -13,10 +13,18 @@ pub enum SaveError {
     #[error("File size must be at least 128Kib.")]
     InvalidSize,
 
-    #[error("Invalid save checksum in block {block:?}:\nExpected: {expected:?}, Found: {found:?}.")]
+    #[error(
+        "Invalid save checksum in block {block:?}:\nExpected: {expected:?}, Found: {found:?}."
+    )]
     InvalidChecksum {
         block: u8,
         expected: [u8; 4],
         found: [u8; 4],
     },
+}
+
+#[derive(Debug, Error)]
+pub enum EncodingError {
+    #[error("Invalid PMD character: {0}")]
+    InvalidCharacter(u8),
 }
