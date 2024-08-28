@@ -79,10 +79,10 @@ impl SkySave {
         Ok(())
     }
 
-    /// Load save data a slice of bytes.
-    pub fn from_slice(data: &[u8]) -> Result<Self, SaveError> {
+    /// Load save data from a slice of bytes.
+    pub fn from_slice<S: AsRef<[u8]>>(data: S) -> Result<Self, SaveError> {
         let res = SkySave {
-            data: data.to_vec(),
+            data: data.as_ref().to_vec(),
         };
         res.validate()?;
 
