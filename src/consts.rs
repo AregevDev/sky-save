@@ -9,10 +9,10 @@ pub const PRIMARY_SAVE_START: usize = 0x0;
 pub const PRIMARY_SAVE_END: usize = 0xB65C;
 
 pub const BACKUP_SAVE_START: usize = 0xC800;
-pub const BACKUP_SAVE_END: usize = 0x19000;
+pub const BACKUP_SAVE_END: usize = 0x17E5C;
 
 pub const QUICKSAVE_START: usize = 0x19000;
-pub const QUICKSAVE_END: usize = 0x1E7FF;
+pub const QUICKSAVE_END: usize = 0x1E800;
 
 /// General save data
 pub const TEAM_NAME_START: usize = 0x994E;
@@ -25,6 +25,5 @@ pub const STORED_MONEY_START: usize = 0x9915;
 pub const STORED_MONEY_END: usize = 0x9919;
 pub const EXPLORER_RANK_START: usize = 0x9958;
 pub const EXPLORER_RANK_END: usize = 0x995C;
-
 pub const NUMBER_OF_ADVENTURERS_START: usize = 0x8B70;
 pub const NUMBER_OF_ADVENTURERS_END: usize = 0x8B74;

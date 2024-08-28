@@ -6,6 +6,7 @@ use bitvec::field::BitField;
 use bitvec::order::Lsb0;
 use bitvec::view::BitView;
 use std::fs;
+use std::ops::Range;
 use std::path::Path;
 
 #[derive(Debug)]
@@ -14,10 +15,18 @@ pub struct SkySave {
 }
 
 impl SkySave {
-    /// Checks if the save data is valid by checking the data length and calculates the checksum.
-    /// This function is called when loading the save data from bytes.
-    /// The checksum is stored in bytes 0 to 3 and computed as follows:
-    /// - Convert every four bytes, from byte 4 to byte 46684, to unsigned 32-bit integers. And then sum them together.
+    fn checksum(&self, data_range: Range<usize>) -> [u8; 4] {
+        let sum = self.data[data_range]
+            .chunks(4)
+            .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap())) // Safe, four bytes.
+            .fold(0u64, |acc, u| acc + u as u64) as u32;
+        sum.to_le_bytes()
+    }
+
+    /// Validates the save data by checking its length and calculating the checksums.
+    /// The save file is divided into three blocks: primary, backup, and quicksave.
+    /// For each block, the first four bytes are the checksum, and it is calculated as follows:
+    /// - Convert every four bytes, from start to end, to unsigned 32-bit integers. And then sum them together.
     /// - Truncate the result to a 32-bit integer.
     /// - Convert the result to little-endian bytes.
     /// - Compare with bytes 0 to 3 to check for validity.
@@ -26,30 +35,44 @@ impl SkySave {
             return Err(SaveError::InvalidSize);
         }
 
-        // 0xB6A isn't divisible by 4. We end up with a reminder of 2 bytes and need to count for them.
-        let chk = self.data[PRIMARY_SAVE_START + 4..PRIMARY_SAVE_END]
-            .chunks(4)
-            .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap())) // Safe, four bytes.
-            .fold(0u64, |acc, u| acc + u as u64) as u32;
-
-        let calc = chk.to_le_bytes();
-        let block0: [u8; 4] = self.data[BACKUP_SAVE_START..BACKUP_SAVE_START + 4].try_into().unwrap(); // Safe, four bytes.
-        let block1: [u8; 4] = self.data
-            [BACKUP_SAVE_START..BACKUP_SAVE_START + 4]
+        let pri_read: [u8; 4] = self.data[PRIMARY_SAVE_START..PRIMARY_SAVE_START + 4]
             .try_into()
             .unwrap(); // Safe, four bytes.
 
-        if calc != block0 {
+        let backup_read: [u8; 4] = self.data[BACKUP_SAVE_START..BACKUP_SAVE_START + 4]
+            .try_into()
+            .unwrap(); // Safe, four bytes.
+
+        let quick_read: [u8; 4] = self.data[QUICKSAVE_START..QUICKSAVE_START + 4]
+            .try_into()
+            .unwrap(); // Safe, four bytes.
+
+        // 0xB6A isn't divisible by 4. We end up with a reminder of 2 bytes and need to count for them.
+        let pri_sum = self.checksum(PRIMARY_SAVE_START + 4..PRIMARY_SAVE_END);
+        let backup_sum = self.checksum(BACKUP_SAVE_START + 4..BACKUP_SAVE_END);
+        let quick_sum = self.checksum(QUICKSAVE_START + 4..QUICKSAVE_END);
+
+        if pri_sum != pri_read {
             return Err(SaveError::InvalidChecksum {
                 block: 0,
-                expected: block0,
-                found: calc,
+                expected: pri_read,
+                found: pri_sum,
             });
-        } else if calc != block1 {
+        }
+
+        if backup_sum != backup_read {
             return Err(SaveError::InvalidChecksum {
                 block: 1,
-                expected: block1,
-                found: calc,
+                expected: backup_read,
+                found: backup_sum,
+            });
+        }
+
+        if quick_sum != quick_read {
+            return Err(SaveError::InvalidChecksum {
+                block: 2,
+                expected: quick_read,
+                found: quick_sum,
             });
         }
 
