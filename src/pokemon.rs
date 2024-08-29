@@ -5,7 +5,7 @@ use bitvec::slice::BitSlice;
 use bitvec::{bitarr, BitArr};
 use std::ops::Range;
 
-pub type IqMap = BitArr!(for 69, in u8, Lsb0);
+pub type IqMapBits = BitArr!(for 69, in u8, Lsb0);
 
 pub const VALID: usize = 0;
 pub const LEVEL: Range<usize> = 1..8;
@@ -90,8 +90,8 @@ impl<'a> StoredPokemon<'a> {
         self.data[EXP].load_le::<u32>()
     }
 
-    pub fn iq_map(&self) -> IqMap {
-        let mut map: IqMap = bitarr!(u8, Lsb0; 0; 69);
+    pub fn iq_map(&self) -> IqMapBits {
+        let mut map: IqMapBits = bitarr!(u8, Lsb0; 0; 69);
         let view = &self.data[IQ_MAP];
         map.copy_from_bitslice(view);
 
@@ -103,8 +103,8 @@ impl<'a> StoredPokemon<'a> {
     }
 
     pub fn name(&self) -> Result<String, EncodingError> {
-        let bytes = &self.data[NAME];
-        let mut bytes = bytes.to_owned();
+        let bits = &self.data[NAME];
+        let mut bytes = bits.to_owned();
         bytes.force_align();
 
         pmd_to_string(bytes.into_vec().as_slice())
