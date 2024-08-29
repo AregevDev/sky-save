@@ -27,3 +27,8 @@ pub const EXPLORER_RANK_START: usize = 0x9958;
 pub const EXPLORER_RANK_END: usize = 0x995C;
 pub const NUMBER_OF_ADVENTURERS_START: usize = 0x8B70;
 pub const NUMBER_OF_ADVENTURERS_END: usize = 0x8B74;
+
+/// Stored Pokemon
+pub const STORED_PKM_START: usize = 0x464;
+pub const STORED_PKM_BIT_LEN: usize = 362;
+pub const STORED_PKM_COUNT: usize = 720;

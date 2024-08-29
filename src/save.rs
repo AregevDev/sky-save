@@ -1,9 +1,10 @@
 use crate::consts::*;
 use crate::encoding::pmd_to_string;
 use crate::error::SaveError;
-use crate::EncodingError;
+use crate::{EncodingError, StoredPokemon};
 use bitvec::field::BitField;
 use bitvec::order::Lsb0;
+use bitvec::slice::BitSlice;
 use bitvec::view::BitView;
 use std::fs;
 use std::ops::Range;
@@ -124,5 +125,13 @@ impl SkySave {
     pub fn explorer_rank(&self) -> u32 {
         let bytes = &self.data[EXPLORER_RANK_START..EXPLORER_RANK_END];
         u32::from_le_bytes(bytes.try_into().unwrap()) // Safe, four bytes.
+    }
+
+    pub fn stored_pokemon(&self) -> Vec<StoredPokemon> {
+        let bits: &BitSlice<u8> = &self.data.view_bits::<Lsb0>()
+            [STORED_PKM_START * 8..STORED_PKM_START * 8 + STORED_PKM_BIT_LEN * STORED_PKM_COUNT];
+        bits.chunks(STORED_PKM_BIT_LEN)
+            .map(|c| StoredPokemon { data: c })
+            .collect()
     }
 }
