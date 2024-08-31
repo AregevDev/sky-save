@@ -1,3 +1,4 @@
+use crate::consts::MIN_SAVE_LEN;
 use crate::encoding::pmd_to_string;
 use crate::error::SaveError;
 use crate::offsets::{general, save, stored};
@@ -9,7 +10,6 @@ use bitvec::view::BitView;
 use std::fs;
 use std::ops::Range;
 use std::path::Path;
-use crate::consts::MIN_SAVE_LEN;
 
 #[derive(Debug)]
 pub struct SkySave {
