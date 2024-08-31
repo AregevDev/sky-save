@@ -41,6 +41,7 @@ impl<'a> ActiveMove<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct ActivePokemon<'a> {
     pub data: &'a BitSlice<u8, Lsb0>,
 }

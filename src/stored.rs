@@ -6,6 +6,7 @@ use bitvec::{bitarr, BitArr};
 
 pub type IqMapBits = BitArr!(for 69, in u8, Lsb0);
 
+#[derive(Debug)]
 pub struct StoredMove<'a> {
     pub data: &'a BitSlice<u8, Lsb0>,
 }
