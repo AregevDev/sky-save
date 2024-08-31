@@ -47,54 +47,54 @@ impl<'a> StoredPokemon<'a> {
     }
 
     pub fn level(&self) -> u8 {
-        self.data[pokemon::LEVEL].load_le::<u8>()
+        self.data[pokemon::LEVEL].load_le()
     }
 
     pub fn id(&self) -> u16 {
-        self.data[pokemon::ID].load_le::<u16>()
+        self.data[pokemon::ID].load_le()
     }
 
     pub fn met_at(&self) -> u8 {
-        self.data[pokemon::MET_AT].load_le::<u8>()
+        self.data[pokemon::MET_AT].load_le()
     }
 
     pub fn met_floor(&self) -> u8 {
-        self.data[pokemon::MET_FLOOR].load_le::<u8>()
+        self.data[pokemon::MET_FLOOR].load_le()
     }
 
     pub fn evolved_at(&self) -> (u8, u8) {
         (
-            self.data[pokemon::EVOLVED_AT_1].load_le::<u8>(),
-            self.data[pokemon::EVOLVED_AT_2].load_le::<u8>(),
+            self.data[pokemon::EVOLVED_AT_1].load_le(),
+            self.data[pokemon::EVOLVED_AT_2].load_le(),
         )
     }
 
     pub fn iq(&self) -> u16 {
-        self.data[pokemon::IQ].load_le::<u16>()
+        self.data[pokemon::IQ].load_le()
     }
 
     pub fn hp(&self) -> u16 {
-        self.data[pokemon::HP].load_le::<u16>()
+        self.data[pokemon::HP].load_le()
     }
 
     pub fn attack(&self) -> u8 {
-        self.data[pokemon::ATTACK].load_le::<u8>()
+        self.data[pokemon::ATTACK].load_le()
     }
 
     pub fn sp_attack(&self) -> u8 {
-        self.data[pokemon::SP_ATTACK].load_le::<u8>()
+        self.data[pokemon::SP_ATTACK].load_le()
     }
 
     pub fn defense(&self) -> u8 {
-        self.data[pokemon::DEFENSE].load_le::<u8>()
+        self.data[pokemon::DEFENSE].load_le()
     }
 
     pub fn sp_defense(&self) -> u8 {
-        self.data[pokemon::SP_DEFENSE].load_le::<u8>()
+        self.data[pokemon::SP_DEFENSE].load_le()
     }
 
     pub fn exp(&self) -> u32 {
-        self.data[pokemon::EXP].load_le::<u32>()
+        self.data[pokemon::EXP].load_le()
     }
 
     pub fn iq_map(&self) -> IqMapBits {
@@ -106,7 +106,7 @@ impl<'a> StoredPokemon<'a> {
     }
 
     pub fn tactic(&self) -> u8 {
-        self.data[pokemon::TACTIC].load_le::<u8>()
+        self.data[pokemon::TACTIC].load_le()
     }
 
     pub fn moves(&self) -> [StoredMove<'a>; 4] {

@@ -118,6 +118,7 @@ impl<'a> ActivePokemon<'a> {
             },
         ]
     }
+
     pub fn iq_map(&self) -> IqMapBits {
         let mut map: IqMapBits = bitarr!(u8, Lsb0; 0; 69);
         let view = &self.data[pokemon::IQ_MAP];
