@@ -1,8 +1,8 @@
 use crate::consts::MIN_SAVE_LEN;
 use crate::encoding::pmd_to_string;
 use crate::error::SaveError;
-use crate::offsets::{general, save, stored};
-use crate::{EncodingError, StoredPokemon};
+use crate::offsets::{active, general, save, stored};
+use crate::{ActivePokemon, EncodingError, StoredPokemon};
 use bitvec::field::BitField;
 use bitvec::order::Lsb0;
 use bitvec::slice::BitSlice;
@@ -118,10 +118,17 @@ impl SkySave {
             .collect()
     }
 
+    pub fn active_pokemon(&self) -> Vec<ActivePokemon> {
+        let bits: &BitSlice<u8> = &self.data.view_bits::<Lsb0>()[active::ACTIVE_PKM_BITS];
+        bits.chunks(active::ACTIVE_PKM_BIT_LEN)
+            .map(|c| ActivePokemon { data: c })
+            .collect()
+    }
+
     fn checksum(&self, data_range: Range<usize>) -> [u8; 4] {
         let sum = self.data[data_range]
             .chunks(4)
-            .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap())) // Safe, four bytes.
+            .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap())) // Safe, four bytes.O
             .fold(0u64, |acc, u| acc + u as u64) as u32;
         sum.to_le_bytes()
     }

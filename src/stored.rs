@@ -1,17 +1,16 @@
 use crate::offsets::stored::{moves, pokemon};
 use crate::{pmd_to_string, EncodingError};
 use bitvec::field::BitField;
-use bitvec::prelude::Lsb0;
-use bitvec::slice::BitSlice;
+use bitvec::prelude::*;
 use bitvec::{bitarr, BitArr};
 
 pub type IqMapBits = BitArr!(for 69, in u8, Lsb0);
 
-pub struct Move<'a> {
+pub struct StoredMove<'a> {
     pub data: &'a BitSlice<u8, Lsb0>,
 }
 
-impl<'a> Move<'a> {
+impl<'a> StoredMove<'a> {
     pub fn valid(&self) -> bool {
         self.data[moves::VALID]
     }
@@ -110,18 +109,18 @@ impl<'a> StoredPokemon<'a> {
         self.data[pokemon::TACTIC].load_le::<u8>()
     }
 
-    pub fn moves(&self) -> [Move<'a>; 4] {
+    pub fn moves(&self) -> [StoredMove<'a>; 4] {
         [
-            Move {
+            StoredMove {
                 data: &self.data[pokemon::MOVE_1],
             },
-            Move {
+            StoredMove {
                 data: &self.data[pokemon::MOVE_2],
             },
-            Move {
+            StoredMove {
                 data: &self.data[pokemon::MOVE_3],
             },
-            Move {
+            StoredMove {
                 data: &self.data[pokemon::MOVE_4],
             },
         ]
