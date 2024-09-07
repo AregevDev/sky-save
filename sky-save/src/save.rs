@@ -106,7 +106,9 @@ impl SkySave {
     }
 
     pub fn held_money(&self) -> u32 {
-        let bits = &self.load_save_slice(general::HELD_MONEY).view_bits::<Lsb0>()[6..30];
+        let bits = &self
+            .load_save_slice(general::HELD_MONEY)
+            .view_bits::<Lsb0>()[6..30];
         bits.load_le::<u32>()
     }
 
@@ -118,7 +120,9 @@ impl SkySave {
     }
 
     pub fn stored_money(&self) -> u32 {
-        let bits = &self.load_save_slice(general::STORED_MONEY).view_bits::<Lsb0>()[6..30];
+        let bits = &self
+            .load_save_slice(general::STORED_MONEY)
+            .view_bits::<Lsb0>()[6..30];
         bits.load_le::<u32>()
     }
 
