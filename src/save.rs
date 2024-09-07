@@ -2,7 +2,8 @@ use crate::consts::MIN_SAVE_LEN;
 use crate::encoding::pmd_to_string;
 use crate::error::SaveError;
 use crate::offsets::{active, general, save, stored};
-use crate::{ActivePokemon, EncodingError, StoredPokemon};
+use crate::{ActivePokemon, ActivePokemonBits, EncodingError, StoredPokemon, StoredPokemonBits};
+use bitvec::bitarr;
 use bitvec::field::BitField;
 use bitvec::order::Lsb0;
 use bitvec::slice::BitSlice;
@@ -111,17 +112,25 @@ impl SkySave {
         u32::from_le_bytes(bytes.try_into().unwrap()) // Safe, four bytes.
     }
 
-    pub fn stored_pokemon(&self) -> Vec<StoredPokemon> {
-        let bits: &BitSlice<u8> = &self.data.view_bits::<Lsb0>()[stored::STORED_PKM_BITS];
+    pub fn stored_pokemon(&self) -> Box<[StoredPokemon]> {
+        let bits = &self.data.view_bits::<Lsb0>()[stored::STORED_PKM_BITS];
         bits.chunks(stored::STORED_PKM_BIT_LEN)
-            .map(|c| StoredPokemon { data: c })
+            .map(|c| {
+                let mut data: StoredPokemonBits = bitarr!(u8, Lsb0; 0; 362);
+                data[0..362].copy_from_bitslice(c);
+                StoredPokemon(data)
+            })
             .collect()
     }
 
-    pub fn active_pokemon(&self) -> Vec<ActivePokemon> {
+    pub fn active_pokemon(&self) -> Box<[ActivePokemon]> {
         let bits: &BitSlice<u8> = &self.data.view_bits::<Lsb0>()[active::ACTIVE_PKM_BITS];
         bits.chunks(active::ACTIVE_PKM_BIT_LEN)
-            .map(|c| ActivePokemon { data: c })
+            .map(|c| {
+                let mut data: ActivePokemonBits = bitarr!(u8, Lsb0; 0; 546);
+                data[0..546].copy_from_bitslice(c);
+                ActivePokemon(data)
+            })
             .collect()
     }
 
