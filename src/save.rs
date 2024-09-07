@@ -1,6 +1,7 @@
 use crate::consts::MIN_SAVE_LEN;
 use crate::encoding::pmd_to_string;
 use crate::error::SaveError;
+use crate::offsets::save::{BACKUP_SAVE, PRIMARY_SAVE};
 use crate::offsets::{active, general, save, stored};
 use crate::{ActivePokemon, ActivePokemonBits, EncodingError, StoredPokemon, StoredPokemonBits};
 use bitvec::bitarr;
@@ -12,68 +13,85 @@ use std::fs;
 use std::ops::Range;
 use std::path::Path;
 
+fn checksum(data: &[u8], data_range: Range<usize>) -> [u8; 4] {
+    (data[data_range]
+        .chunks(4)
+        .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap())) // Safe, four bytes.O
+        .fold(0u64, |acc, u| acc + u as u64) as u32)
+        .to_le_bytes()
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[repr(usize)]
+pub enum ActiveSaveBlock {
+    Primary = PRIMARY_SAVE.start,
+    Backup = BACKUP_SAVE.start,
+}
+
 #[derive(Debug)]
 pub struct SkySave {
     pub data: Vec<u8>,
+    pub active_save_block: ActiveSaveBlock,
+    pub quicksave_valid: bool,
 }
 
 impl SkySave {
-    /// Validates the save data by checking its length and calculating the checksums.
+    fn load_save_slice(&self, range: Range<usize>) -> &[u8] {
+        &self.data[range.start + self.active_save_block as usize
+            ..range.end + self.active_save_block as usize]
+    }
+
+    fn load_save_bits(&self, range: Range<usize>) -> &BitSlice<u8, Lsb0> {
+        &self.data.view_bits()[range.start + self.active_save_block as usize * 8
+            ..range.end + self.active_save_block as usize * 8]
+    }
+
+    /// Load and validates the save data from a slice of bytes.
+    /// The save data is validated by checking its length and calculating the checksums.
     /// The save file is divided into three blocks: primary, backup, and quicksave.
     /// For each block, the first four bytes are the checksum, and it is calculated as follows:
     /// - Convert every four bytes, from start to end, to unsigned 32-bit integers. And then sum them together.
     /// - Truncate the result to a 32-bit integer.
     /// - Convert the result to little-endian bytes.
     /// - Compare with bytes 0 to 3 to check for validity.
-    pub fn validate(&self) -> Result<(), SaveError> {
-        if self.data.len() < MIN_SAVE_LEN {
+    pub fn from_slice<S: AsRef<[u8]>>(data: S) -> Result<Self, SaveError> {
+        let data = data.as_ref();
+
+        if data.len() < MIN_SAVE_LEN {
             return Err(SaveError::InvalidSize);
         }
 
-        let pri_read: [u8; 4] = self.data[save::PRIMARY_READ_CHECKSUM].try_into().unwrap(); // Safe, four bytes.
-        let backup_read: [u8; 4] = self.data[save::BACKUP_READ_CHECKSUM].try_into().unwrap(); // Safe, four bytes.
-        let quick_read: [u8; 4] = self.data[save::QUICKSAVE_READ_CHECKSUM].try_into().unwrap(); // Safe, four bytes.
+        let pri_read: [u8; 4] = data[save::PRIMARY_READ_CHECKSUM].try_into().unwrap(); // Safe, four bytes.
+        let backup_read: [u8; 4] = data[save::BACKUP_READ_CHECKSUM].try_into().unwrap(); // Safe, four bytes.
+        let quick_read: [u8; 4] = data[save::QUICKSAVE_READ_CHECKSUM].try_into().unwrap(); // Safe, four bytes.
 
         // 0xB6A isn't divisible by 4. We end up with a reminder of 2 bytes and need to count for them.
-        let pri_sum = self.checksum(save::PRIMARY_CHECKSUM);
-        let backup_sum = self.checksum(save::BACKUP_CHECKSUM);
-        let quick_sum = self.checksum(save::QUICKSAVE_CHECKSUM);
+        let pri_sum = checksum(data, save::PRIMARY_CHECKSUM);
+        let backup_sum = checksum(data, save::BACKUP_CHECKSUM);
+        let quick_sum = checksum(data, save::QUICKSAVE_CHECKSUM);
 
-        if pri_sum != pri_read {
+        let pri_matches = pri_sum == pri_read;
+        let backup_matches = backup_sum == backup_read;
+        let quick_matches = quick_sum == quick_read;
+
+        if !pri_matches && !backup_matches {
             return Err(SaveError::InvalidChecksum {
-                block: 0,
-                expected: pri_read,
-                found: pri_sum,
+                pri_expected: pri_read,
+                pri_found: pri_sum,
+                bak_expected: backup_read,
+                bak_found: backup_sum,
             });
         }
 
-        if backup_sum != backup_read {
-            return Err(SaveError::InvalidChecksum {
-                block: 1,
-                expected: backup_read,
-                found: backup_sum,
-            });
-        }
-
-        if quick_sum != quick_read {
-            return Err(SaveError::InvalidChecksum {
-                block: 2,
-                expected: quick_read,
-                found: quick_sum,
-            });
-        }
-
-        Ok(())
-    }
-
-    /// Load save data from a slice of bytes.
-    pub fn from_slice<S: AsRef<[u8]>>(data: S) -> Result<Self, SaveError> {
-        let res = SkySave {
+        Ok(SkySave {
             data: data.as_ref().to_vec(),
-        };
-        res.validate()?;
-
-        Ok(res)
+            active_save_block: if pri_matches {
+                ActiveSaveBlock::Primary
+            } else {
+                ActiveSaveBlock::Backup
+            },
+            quicksave_valid: quick_matches,
+        })
     }
 
     /// Loads save data from file.
@@ -83,32 +101,34 @@ impl SkySave {
     }
 
     pub fn team_name(&self) -> Result<String, EncodingError> {
-        let bytes = &self.data[general::TEAM_NAME];
+        let bytes = self.load_save_slice(general::TEAM_NAME);
         pmd_to_string(bytes)
     }
 
     pub fn held_money(&self) -> u32 {
-        let bits = &self.data[general::HELD_MONEY].view_bits::<Lsb0>()[6..30];
+        let bits = &self.load_save_slice(general::HELD_MONEY).view_bits::<Lsb0>()[6..30];
         bits.load_le::<u32>()
     }
 
     pub fn sp_episode_held_money(&self) -> u32 {
-        let bits = &self.data[general::SP_EPISODE_HELD_MONEY].view_bits::<Lsb0>()[6..30];
+        let bits = &self
+            .load_save_slice(general::SP_EPISODE_HELD_MONEY)
+            .view_bits::<Lsb0>()[6..30];
         bits.load_le::<u32>()
     }
 
     pub fn stored_money(&self) -> u32 {
-        let bits = &self.data[general::STORED_MONEY].view_bits::<Lsb0>()[6..30];
+        let bits = &self.load_save_slice(general::STORED_MONEY).view_bits::<Lsb0>()[6..30];
         bits.load_le::<u32>()
     }
 
     pub fn number_of_adventurers(&self) -> i32 {
-        let bytes = &self.data[general::NUMBER_OF_ADVENTURERS];
+        let bytes = self.load_save_slice(general::NUMBER_OF_ADVENTURERS);
         i32::from_le_bytes(bytes.try_into().unwrap()) // Safe, four bytes.
     }
 
     pub fn explorer_rank(&self) -> u32 {
-        let bytes = &self.data[general::EXPLORER_RANK];
+        let bytes = self.load_save_slice(general::EXPLORER_RANK);
         u32::from_le_bytes(bytes.try_into().unwrap()) // Safe, four bytes.
     }
 
@@ -124,7 +144,7 @@ impl SkySave {
     }
 
     pub fn active_pokemon(&self) -> Box<[ActivePokemon]> {
-        let bits: &BitSlice<u8> = &self.data.view_bits::<Lsb0>()[active::ACTIVE_PKM_BITS];
+        let bits: &BitSlice<u8> = self.load_save_bits(active::ACTIVE_PKM_BITS);
         bits.chunks(active::ACTIVE_PKM_BIT_LEN)
             .map(|c| {
                 let mut data: ActivePokemonBits = bitarr!(u8, Lsb0; 0; 546);
@@ -132,13 +152,5 @@ impl SkySave {
                 ActivePokemon(data)
             })
             .collect()
-    }
-
-    fn checksum(&self, data_range: Range<usize>) -> [u8; 4] {
-        let sum = self.data[data_range]
-            .chunks(4)
-            .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap())) // Safe, four bytes.O
-            .fold(0u64, |acc, u| acc + u as u64) as u32;
-        sum.to_le_bytes()
     }
 }

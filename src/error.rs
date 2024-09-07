@@ -14,12 +14,15 @@ pub enum SaveError {
     InvalidSize,
 
     #[error(
-        "Invalid save checksum in block {block:?}:\nExpected: {expected:?}, Found: {found:?}."
+        "Invalid save checksum in neither primary or backup save blocks:\n\
+        Primary: expected {pri_expected:?}, Found: {pri_found:?}\n\
+        Backup: expected {bak_expected:?}, Found: {bak_found:?}"
     )]
     InvalidChecksum {
-        block: u8,
-        expected: [u8; 4],
-        found: [u8; 4],
+        pri_expected: [u8; 4],
+        pri_found: [u8; 4],
+        bak_expected: [u8; 4],
+        bak_found: [u8; 4],
     },
 }
 
