@@ -1,4 +1,4 @@
-use eframe::egui::{Context, ViewportCommand};
+use eframe::egui::{Context, Key, ViewportCommand};
 use eframe::{egui, App, CreationContext, Frame};
 use egui::{include_image, IconData, ImageSource};
 use sky_save::SkySave;
@@ -62,7 +62,7 @@ impl App for SkySaveGui {
                 }
 
                 if ui.button("Quit").clicked() {
-                    ctx.send_viewport_cmd(ViewportCommand::Close)
+                    ctx.send_viewport_cmd(ViewportCommand::Close);
                 }
             });
         });
@@ -83,6 +83,10 @@ impl App for SkySaveGui {
                 });
             }
         });
+
+        if ctx.input(|st| st.key_pressed(Key::Escape)) {
+            ctx.send_viewport_cmd(ViewportCommand::Close);
+        }
     }
 }
 
