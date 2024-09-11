@@ -27,7 +27,7 @@ pub enum ActiveSaveBlock {
     Backup = BACKUP_SAVE.start,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SkySave {
     pub data: Vec<u8>,
     pub active_save_block: ActiveSaveBlock,

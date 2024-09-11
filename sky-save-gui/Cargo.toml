@@ -10,4 +10,6 @@ readme = "../README.md"
 
 [dependencies]
 sky-save = { path = "../sky-save" }
-cushy = { version = "0.4.0" }
+eframe = { version = "0.28.1", features = ["wgpu"] }
+egui_extras = { version = "0.28.1" }
+rfd = "0.14.1"
