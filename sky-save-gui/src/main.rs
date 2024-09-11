@@ -2,10 +2,9 @@ use eframe::egui::{Context, ViewportCommand};
 use eframe::{egui, App, CreationContext, Frame};
 use egui::{include_image, IconData, ImageSource};
 use sky_save::SkySave;
-use std::cell::RefCell;
 use std::path::PathBuf;
-use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 pub const ICON_BYTES: &[u8] = include_bytes!("../res/icon.rgba").as_slice();
 pub const PNG_BYTES: ImageSource = include_image!("../res/icon.png");
@@ -18,7 +17,7 @@ struct State {
 
 #[derive(Debug, Default)]
 struct SkySaveGui {
-    pub state: Rc<RefCell<State>>,
+    pub state: Arc<Mutex<State>>,
 }
 
 impl SkySaveGui {
@@ -28,33 +27,36 @@ impl SkySaveGui {
         ctx.set_pixels_per_point(1.2);
 
         SkySaveGui {
-            state: Rc::new(RefCell::new(State::default())),
+            state: Arc::new(Mutex::new(State::default())),
         }
     }
 }
 
 impl App for SkySaveGui {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-        egui::TopBottomPanel::top("E").show(ctx, |ui| {
+        egui::TopBottomPanel::top("Top").show(ctx, |ui| {
             ui.menu_button("File", |ui| {
                 if ui.button("Open").clicked() {
-                    let path = rfd::FileDialog::new()
-                        .add_filter("PMD EoS Saves", &["sav", "dsv"])
-                        .set_title("Open save file")
-                        .pick_file();
+                    let st = Arc::clone(&self.state);
+                    thread::spawn(move || {
+                        let path = rfd::FileDialog::new()
+                            .add_filter("PMD EoS Saves", &["sav", "dsv"])
+                            .set_title("Open save file")
+                            .pick_file();
 
-                    if let Some(p) = path {
-                        match SkySave::open(&p) {
-                            Ok(s) => {
-                                let st = &mut *self.state.borrow_mut();
-                                st.filepath = Some(p);
-                                st.save = Some(s);
-                            }
-                            Err(e) => {
-                                eprintln!("{:?}", e);
+                        if let Some(p) = path {
+                            match SkySave::open(&p) {
+                                Ok(s) => {
+                                    let mut st = st.lock().unwrap();
+                                    st.filepath = Some(p);
+                                    st.save = Some(s);
+                                }
+                                Err(e) => {
+                                    eprintln!("{:?}", e);
+                                }
                             }
                         }
-                    }
+                    });
 
                     ui.close_menu();
                 }
@@ -67,14 +69,18 @@ impl App for SkySaveGui {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Sky Save GUI");
-            let st = Rc::clone(&self.state);
-            let st = &*st.borrow_mut();
+            let st = Arc::clone(&self.state);
+            let st = st.lock().unwrap();
 
             if let Some(s) = &st.save {
                 ui.label(format!(
                     "Team name: {}",
                     s.team_name().unwrap_or("???".into())
                 ));
+            } else {
+                ui.centered_and_justified(|ui| {
+                    ui.label("Open a save file with `File -> Open`");
+                });
             }
         });
     }
