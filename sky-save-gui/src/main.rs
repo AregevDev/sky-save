@@ -1,6 +1,6 @@
 use eframe::egui::{Context, Key, ViewportCommand};
 use eframe::{egui, App, CreationContext, Frame};
-use egui::{include_image, IconData, ImageSource};
+use egui::IconData;
 use sky_save::SkySave;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
