@@ -7,7 +7,6 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 pub const ICON_BYTES: &[u8] = include_bytes!("../res/icon.rgba").as_slice();
-pub const PNG_BYTES: ImageSource = include_image!("../res/icon.png");
 
 #[derive(Debug, Default)]
 struct State {
@@ -107,14 +106,12 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_min_inner_size([640.0, 480.0])
-            .with_inner_size([640.0, 480.0]),
-        window_builder: Some(Box::new(|e| {
-            e.with_icon(Arc::new(IconData {
+            .with_inner_size([640.0, 480.0])
+            .with_icon(Arc::new(IconData {
                 rgba: ICON_BYTES.to_vec(),
                 width: 32,
                 height: 32,
-            }))
-        })),
+            })),
 
         ..Default::default()
     };
