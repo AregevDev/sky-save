@@ -70,7 +70,20 @@ impl App for SkySaveGui {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Sky Save GUI");
             let st = Arc::clone(&self.state);
-            let st = st.lock().unwrap();
+            let mut st = st.lock().unwrap();
+
+            if let Some(sv) = ctx.input(|st| st.raw.dropped_files.clone()).first() {
+                let path = sv.path.clone().unwrap();
+                match SkySave::open(&path) {
+                    Ok(s) => {
+                        st.filepath = Some(path);
+                        st.save = Some(s);
+                    }
+                    Err(e) => {
+                        eprintln!("{:?}", e);
+                    }
+                }
+            }
 
             if let Some(s) = &st.save {
                 ui.label(format!(
