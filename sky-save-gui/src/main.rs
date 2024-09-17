@@ -8,6 +8,10 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{mpsc, Arc};
 use std::thread;
 
+pub mod built_info {
+    include!(concat!(env!("OUT_DIR"), "/built.rs"));
+}
+
 pub const ICON_BYTES: &[u8] = include_bytes!("../res/icon.rgba").as_slice();
 
 #[derive(Debug)]
@@ -123,6 +127,14 @@ impl App for SkySaveGui {
                             }
                         });
                     });
+
+                egui::TopBottomPanel::bottom("pnl_version").show(ctx, |ui| {
+                    ui.label(format!(
+                        "Version: {} (git commit: {})",
+                        built_info::PKG_VERSION,
+                        built_info::GIT_COMMIT_HASH_SHORT.unwrap_or("Unknown")
+                    ));
+                });
             }
         });
 

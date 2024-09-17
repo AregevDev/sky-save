@@ -1,9 +1,10 @@
-#[cfg(windows)]
 fn main() {
-    let mut res = winres::WindowsResource::new();
-    res.set_icon("res/icon.ico");
-    res.compile().unwrap();
-}
+    #[cfg(target_os = "windows")]
+    {
+        let mut res = winres::WindowsResource::new();
+        res.set_icon("res/icon.ico");
+        res.compile().unwrap();
+    }
 
-#[cfg(not(windows))]
-fn main() {}
+    built::write_built_file().expect("Failed to acquire build-time information");
+}
