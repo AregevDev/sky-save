@@ -21,15 +21,15 @@ pub const ICON_BYTES: &[u8] = include_bytes!("../res/icon.rgba").as_slice();
 const TABS: [Tab; 3] = [
     Tab {
         name: "General",
-        ui_func: general_ui,
+        ui_fn: general_ui,
     },
     Tab {
         name: "Stored Pokemon",
-        ui_func: stored_ui,
+        ui_fn: stored_ui,
     },
     Tab {
         name: "Active Pokemon",
-        ui_func: active_ui,
+        ui_fn: active_ui,
     },
 ];
 
@@ -51,7 +51,7 @@ fn active_ui(ui: &mut Ui, _save: &mut SkySave) {
 #[derive(Debug)]
 struct Tab {
     name: &'static str,
-    ui_func: fn(&mut Ui, &mut SkySave),
+    ui_fn: fn(&mut Ui, &mut SkySave),
 }
 
 #[derive(Debug)]
@@ -61,7 +61,7 @@ struct TabsBehavior<'a> {
 
 impl<'a> Behavior<Tab> for TabsBehavior<'a> {
     fn pane_ui(&mut self, ui: &mut Ui, _tile_id: TileId, pane: &mut Tab) -> UiResponse {
-        (pane.ui_func)(ui, self.save);
+        (pane.ui_fn)(ui, self.save);
         UiResponse::None
     }
 
