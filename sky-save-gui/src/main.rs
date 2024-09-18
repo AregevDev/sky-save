@@ -1,9 +1,5 @@
 use eframe::egui::widget_text::RichText;
-use eframe::egui::{
-    containers, vec2, Button, CentralPanel, Context, DragValue, FontFamily, FontId, Id, Key,
-    Margin, Response, Sense, Stroke, TextEdit, TextStyle, TopBottomPanel, Ui, Vec2,
-    ViewportCommand, WidgetText,
-};
+use eframe::egui::{containers, vec2, Button, CentralPanel, Context, DragValue, FontFamily, FontId, Id, Key, Margin, Response, Sense, Stroke, TextEdit, TextStyle, TopBottomPanel, Ui, Vec2, ViewportCommand, Visuals, WidgetText};
 use eframe::{egui, App, CreationContext, Frame};
 use egui::IconData;
 use egui_tiles::{Behavior, TabState, TileId, Tiles, Tree, UiResponse};
@@ -202,6 +198,7 @@ impl SkySaveGui {
         let ctx = &cc.egui_ctx;
 
         ctx.set_pixels_per_point(1.2);
+        ctx.set_visuals(Visuals::dark());
 
         SkySaveGui {
             state: State::default(),
