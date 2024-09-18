@@ -1,7 +1,8 @@
 use eframe::egui::widget_text::RichText;
 use eframe::egui::{
-    containers, vec2, Button, CentralPanel, Context, FontFamily, FontId, Id, Key, Margin, Response,
-    Sense, Stroke, TextEdit, TextStyle, TopBottomPanel, Ui, Vec2, ViewportCommand, WidgetText,
+    containers, vec2, Button, CentralPanel, Context, DragValue, FontFamily, FontId, Id, Key,
+    Margin, Response, Sense, Stroke, TextEdit, TextStyle, TopBottomPanel, Ui, Vec2,
+    ViewportCommand, WidgetText,
 };
 use eframe::{egui, App, CreationContext, Frame};
 use egui::IconData;
@@ -20,11 +21,36 @@ pub mod built_info {
 pub const ICON_BYTES: &[u8] = include_bytes!("../res/icon.rgba").as_slice();
 
 fn general_ui(state: &mut GeneralTab, ui: &mut Ui, _save: &mut SkySave) {
-    ui.add(
-        TextEdit::singleline(&mut state.team_name_buf)
-            .char_limit(10)
-            .hint_text("Team name"),
-    );
+    ui.heading("General Save Data");
+    ui.add_space(16.0);
+    ui.horizontal(|ui| {
+        ui.label("Team name: ");
+        ui.add(
+            TextEdit::singleline(&mut state.team_name_buf)
+                .char_limit(10)
+                .hint_text("Team name"),
+        );
+    });
+    ui.horizontal(|ui| {
+        ui.label("Held money: ");
+        ui.add(DragValue::new(&mut state.held_money).speed(50.0));
+    });
+    ui.horizontal(|ui| {
+        ui.label("Sp Episode held money: ");
+        ui.add(DragValue::new(&mut state.sp_episode_held_money).speed(50.0));
+    });
+    ui.horizontal(|ui| {
+        ui.label("Stored money: ");
+        ui.add(DragValue::new(&mut state.stored_money).speed(50.0));
+    });
+    ui.horizontal(|ui| {
+        ui.label("Explorer rank: ");
+        ui.add(DragValue::new(&mut state.explorer_rank).speed(25.0));
+    });
+    ui.horizontal(|ui| {
+        ui.label("Number of adventures: ");
+        ui.add(DragValue::new(&mut state.number_of_adventures).speed(0.25));
+    });
 }
 
 fn stored_ui(_state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave) {
@@ -45,12 +71,22 @@ enum GuiTabState {
 #[derive(Debug, Default)]
 struct GeneralTab {
     team_name_buf: String,
+    held_money: u32,
+    sp_episode_held_money: u32,
+    stored_money: u32,
+    explorer_rank: u32,
+    number_of_adventures: i32,
 }
 
 impl GeneralTab {
     pub fn new(save: &mut SkySave) -> Self {
         Self {
             team_name_buf: save.team_name().unwrap_or("???".into()),
+            held_money: save.held_money(),
+            sp_episode_held_money: save.sp_episode_held_money(),
+            stored_money: save.stored_money(),
+            explorer_rank: save.explorer_rank(),
+            number_of_adventures: save.number_of_adventurers(),
         }
     }
 }
