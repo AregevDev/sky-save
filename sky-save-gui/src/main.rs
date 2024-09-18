@@ -1,7 +1,7 @@
 use eframe::egui::widget_text::RichText;
 use eframe::egui::{
     containers, vec2, Button, CentralPanel, Context, FontFamily, FontId, Id, Key, Margin, Response,
-    Sense, Stroke, TextStyle, TopBottomPanel, Ui, Vec2, ViewportCommand, WidgetText,
+    Sense, Stroke, TextEdit, TextStyle, TopBottomPanel, Ui, Vec2, ViewportCommand, WidgetText,
 };
 use eframe::{egui, App, CreationContext, Frame};
 use egui::IconData;
@@ -18,40 +18,53 @@ pub mod built_info {
 }
 
 pub const ICON_BYTES: &[u8] = include_bytes!("../res/icon.rgba").as_slice();
-const TABS: [Tab; 3] = [
-    Tab {
-        name: "General",
-        ui_fn: general_ui,
-    },
-    Tab {
-        name: "Stored Pokemon",
-        ui_fn: stored_ui,
-    },
-    Tab {
-        name: "Active Pokemon",
-        ui_fn: active_ui,
-    },
-];
 
-fn general_ui(ui: &mut Ui, save: &mut SkySave) {
-    ui.label(format!(
-        "Hello, {}",
-        save.team_name().unwrap_or("Unknown".into())
-    ));
+fn general_ui(state: &mut GeneralTab, ui: &mut Ui, _save: &mut SkySave) {
+    ui.add(
+        TextEdit::singleline(&mut state.team_name_buf)
+            .char_limit(10)
+            .hint_text("Team name"),
+    );
 }
 
-fn stored_ui(ui: &mut Ui, _save: &mut SkySave) {
+fn stored_ui(_state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave) {
     ui.label("Display the stored Pokemon here.");
 }
 
-fn active_ui(ui: &mut Ui, _save: &mut SkySave) {
+fn active_ui(_state: &mut ActivePokemonTab, ui: &mut Ui, _save: &mut SkySave) {
     ui.label("Display the active Pokemon here.");
 }
 
 #[derive(Debug)]
-struct Tab {
+enum GuiTabState {
+    General(GeneralTab),
+    StoredPokemon(StoredPokemonTab),
+    ActivePokemon(ActivePokemonTab),
+}
+
+#[derive(Debug, Default)]
+struct GeneralTab {
+    team_name_buf: String,
+}
+
+impl GeneralTab {
+    pub fn new(save: &mut SkySave) -> Self {
+        Self {
+            team_name_buf: save.team_name().unwrap_or("???".into()),
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+struct StoredPokemonTab;
+
+#[derive(Debug, Default)]
+struct ActivePokemonTab;
+
+#[derive(Debug)]
+struct TabPane {
     name: &'static str,
-    ui_fn: fn(&mut Ui, &mut SkySave),
+    tab_state: GuiTabState,
 }
 
 #[derive(Debug)]
@@ -59,20 +72,27 @@ struct TabsBehavior<'a> {
     save: &'a mut SkySave,
 }
 
-impl<'a> Behavior<Tab> for TabsBehavior<'a> {
-    fn pane_ui(&mut self, ui: &mut Ui, _tile_id: TileId, pane: &mut Tab) -> UiResponse {
-        (pane.ui_fn)(ui, self.save);
+impl<'a> Behavior<TabPane> for TabsBehavior<'a> {
+    fn pane_ui(&mut self, ui: &mut Ui, _tile_id: TileId, pane: &mut TabPane) -> UiResponse {
+        CentralPanel::default()
+            .frame(containers::Frame::default().outer_margin(Margin::symmetric(16.0, 16.0)))
+            .show_inside(ui, |ui| match &mut pane.tab_state {
+                GuiTabState::General(s) => general_ui(s, ui, self.save),
+                GuiTabState::StoredPokemon(s) => stored_ui(s, ui, self.save),
+                GuiTabState::ActivePokemon(s) => active_ui(s, ui, self.save),
+            });
+
         UiResponse::None
     }
 
-    fn tab_title_for_pane(&mut self, pane: &Tab) -> WidgetText {
+    fn tab_title_for_pane(&mut self, pane: &TabPane) -> WidgetText {
         pane.name.into()
     }
 
     // Taken from the default implementation, changed to disable dragging.
     fn tab_ui(
         &mut self,
-        tiles: &mut Tiles<Tab>,
+        tiles: &mut Tiles<TabPane>,
         ui: &mut Ui,
         id: Id,
         tile_id: TileId,
@@ -138,7 +158,7 @@ struct State {
 struct SkySaveGui {
     pub state: State,
     pub message_ch: (Sender<Message>, Receiver<Message>),
-    pub tabs: Tree<Tab>,
+    pub tabs: Option<Tree<TabPane>>,
 }
 
 impl SkySaveGui {
@@ -147,24 +167,10 @@ impl SkySaveGui {
 
         ctx.set_pixels_per_point(1.2);
 
-        let mut tiles = Tiles::default();
-        let mut tabs = vec![];
-
-        tabs.push({
-            let children = TABS
-                .into_iter()
-                .map(|index| tiles.insert_pane(index))
-                .collect();
-
-            tiles.insert_tab_tile(children)
-        });
-
-        let root = tiles.insert_tab_tile(tabs);
-
         SkySaveGui {
             state: State::default(),
             message_ch: mpsc::channel(),
-            tabs: Tree::new("tree", root, tiles),
+            tabs: None,
         }
     }
 
@@ -181,6 +187,51 @@ impl SkySaveGui {
                     .unwrap();
             }
         });
+    }
+
+    pub fn open_save(&mut self, path: PathBuf) {
+        match SkySave::open(&path) {
+            Ok(mut s) => {
+                self.tabs = Some(self.build_tabs(&mut s));
+                self.state.filepath = Some(path);
+                self.state.save = Some(s);
+            }
+            Err(e) => {
+                eprintln!("{:?}", e);
+            }
+        }
+    }
+
+    pub fn build_tabs(&mut self, save: &mut SkySave) -> Tree<TabPane> {
+        let mut tiles = Tiles::default();
+        let mut ui_tabs = vec![];
+
+        let tabs = vec![
+            TabPane {
+                name: "General",
+                tab_state: GuiTabState::General(GeneralTab::new(save)),
+            },
+            TabPane {
+                name: "Stored Pokemon",
+                tab_state: GuiTabState::StoredPokemon(StoredPokemonTab::default()),
+            },
+            TabPane {
+                name: "Active Pokemon",
+                tab_state: GuiTabState::ActivePokemon(ActivePokemonTab::default()),
+            },
+        ];
+
+        ui_tabs.push({
+            let children = tabs
+                .into_iter()
+                .map(|index| tiles.insert_pane(index))
+                .collect();
+
+            tiles.insert_tab_tile(children)
+        });
+
+        let root = tiles.insert_tab_tile(ui_tabs);
+        Tree::new("tree", root, tiles)
     }
 }
 
@@ -203,34 +254,20 @@ impl App for SkySaveGui {
         CentralPanel::default().show(ctx, |ui| {
             if let Some(sv) = ctx.input(|st| st.raw.dropped_files.clone()).first() {
                 let path = sv.path.clone().unwrap();
-                match SkySave::open(&path) {
-                    Ok(s) => {
-                        self.state.filepath = Some(path);
-                        self.state.save = Some(s);
-                    }
-                    Err(e) => {
-                        eprintln!("{:?}", e);
-                    }
-                }
+                self.open_save(path);
             }
 
             if let Ok(msg) = self.message_ch.1.try_recv() {
                 match msg {
-                    Message::SaveFileOpened { filepath } => match SkySave::open(&filepath) {
-                        Ok(s) => {
-                            self.state.filepath = Some(filepath);
-                            self.state.save = Some(s);
-                        }
-                        Err(e) => {
-                            eprintln!("{:?}", e);
-                        }
-                    },
+                    Message::SaveFileOpened { filepath } => self.open_save(filepath),
                 }
             }
 
-            if let Some(ref mut s) = &mut self.state.save {
+            if let Some(s) = &mut self.state.save {
                 let mut be = TabsBehavior { save: s };
-                self.tabs.ui(&mut be, ui);
+                if let Some(t) = &mut self.tabs {
+                    t.ui(&mut be, ui);
+                }
             } else {
                 CentralPanel::default()
                     .frame(containers::Frame::none().outer_margin(Margin::symmetric(64.0, 64.0)))
