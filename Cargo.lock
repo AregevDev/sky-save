@@ -214,9 +214,9 @@ dependencies = [
 
 [[package]]
 name = "ashpd"
-version = "0.8.1"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd884d7c72877a94102c3715f3b1cd09ff4fac28221add3e57cfbe25c236d093"
+checksum = "bfe7e0dd0ac5a401dc116ed9f9119cf9decc625600474cb41f0fc0a0050abc9a"
 dependencies = [
  "async-fs 2.1.2",
  "async-net",
@@ -224,9 +224,13 @@ dependencies = [
  "futures-channel",
  "futures-util",
  "rand",
+    "raw-window-handle 0.6.2",
  "serde",
  "serde_repr",
  "url",
+    "wayland-backend",
+    "wayland-client",
+    "wayland-protocols 0.32.4",
  "zbus 4.4.0",
 ]
 
@@ -1024,7 +1028,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "web-time",
+    "web-time 0.2.4",
  "wgpu",
  "winapi",
  "winit",
@@ -1059,7 +1063,7 @@ dependencies = [
  "log",
  "thiserror",
  "type-map",
- "web-time",
+    "web-time 0.2.4",
  "wgpu",
  "winit",
 ]
@@ -1077,7 +1081,7 @@ dependencies = [
  "log",
  "raw-window-handle 0.6.2",
  "smithay-clipboard",
- "web-time",
+    "web-time 0.2.4",
  "webbrowser",
  "winit",
 ]
@@ -1124,6 +1128,16 @@ dependencies = [
  "itertools",
  "log",
  "serde",
+]
+
+[[package]]
+name = "egui_virtual_list"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa006333a04fb5ed773a5e963bb366831046f6f462b7528059924deae008f8a0"
+dependencies = [
+    "egui",
+    "web-time 1.1.0",
 ]
 
 [[package]]
@@ -2124,17 +2138,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "objc-foundation"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1add1b659e36c9607c7aab864a76c7a4c2760cd0cd2e120f3fb8b952c7e22bf9"
-dependencies = [
- "block",
- "objc",
- "objc_id",
-]
-
-[[package]]
 name = "objc-sys"
 version = "0.2.0-beta.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2246,6 +2249,7 @@ checksum = "0ee638a5da3799329310ad4cfa62fbf045d5f56e3ef5ba4149e7452dcf89d5a8"
 dependencies = [
  "bitflags 2.6.0",
  "block2 0.5.1",
+    "dispatch",
  "libc",
  "objc2 0.5.2",
 ]
@@ -2273,15 +2277,6 @@ dependencies = [
  "objc2 0.5.2",
  "objc2-foundation",
  "objc2-metal",
-]
-
-[[package]]
-name = "objc_id"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c92d4ddb4bd7b50d730c215ff871754d0da6b2178849f8a2a2ab69712d0c073b"
-dependencies = [
- "objc",
 ]
 
 [[package]]
@@ -2617,18 +2612,17 @@ checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
 
 [[package]]
 name = "rfd"
-version = "0.14.1"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25a73a7337fc24366edfca76ec521f51877b114e42dab584008209cca6719251"
+checksum = "8af382a047821a08aa6bfc09ab0d80ff48d45d8726f7cd8e44891f7cb4a4278e"
 dependencies = [
  "ashpd",
- "block",
- "dispatch",
+    "block2 0.5.1",
  "js-sys",
  "log",
- "objc",
- "objc-foundation",
- "objc_id",
+    "objc2 0.5.2",
+    "objc2-app-kit",
+    "objc2-foundation",
  "pollster",
  "raw-window-handle 0.6.2",
  "urlencoding",
@@ -2785,6 +2779,7 @@ dependencies = [
  "eframe",
  "egui_extras",
  "egui_tiles",
+    "egui_virtual_list",
  "rfd",
  "sky-save",
  "winres",
@@ -3447,6 +3442,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "web-time"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
+dependencies = [
+    "js-sys",
+    "wasm-bindgen",
+]
+
+[[package]]
 name = "webbrowser"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3915,7 +3920,7 @@ dependencies = [
  "wayland-protocols 0.31.2",
  "wayland-protocols-plasma",
  "web-sys",
- "web-time",
+    "web-time 0.2.4",
  "windows-sys 0.48.0",
  "x11-dl",
  "x11rb",

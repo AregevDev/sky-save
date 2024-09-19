@@ -14,7 +14,8 @@ sky-save = { path = "../sky-save" }
 eframe = { version = "0.28.1", features = ["wgpu"] }
 egui_extras = { version = "0.28.1" }
 egui_tiles = "0.9.1"
-rfd = "0.14.1"
+egui_virtual_list = "0.4.0"
+rfd = "0.15.0"
 
 [build-dependencies]
 built = { version = "0.7.4", features = ["git2"] }

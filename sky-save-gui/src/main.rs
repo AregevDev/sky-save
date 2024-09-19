@@ -1,8 +1,16 @@
+mod tabs;
+
+use crate::tabs::{
+    ActivePokemonTab, GeneralTab, GuiTabState, StoredPokemonTab, TabPane, TabsBehavior,
+};
 use eframe::egui::widget_text::RichText;
-use eframe::egui::{containers, vec2, Button, CentralPanel, Context, DragValue, FontFamily, FontId, Id, Key, Margin, Response, Sense, Stroke, TextEdit, TextStyle, TopBottomPanel, Ui, Vec2, ViewportCommand, Visuals, WidgetText};
+use eframe::egui::{
+    containers, Button, CentralPanel, Context, FontFamily, FontId, Key, Margin, TopBottomPanel,
+    ViewportCommand, Visuals,
+};
 use eframe::{egui, App, CreationContext, Frame};
 use egui::IconData;
-use egui_tiles::{Behavior, TabState, TileId, Tiles, Tree, UiResponse};
+use egui_tiles::{Tiles, Tree};
 use sky_save::SkySave;
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -15,165 +23,6 @@ pub mod built_info {
 }
 
 pub const ICON_BYTES: &[u8] = include_bytes!("../res/icon.rgba").as_slice();
-
-fn general_ui(state: &mut GeneralTab, ui: &mut Ui, _save: &mut SkySave) {
-    ui.heading("General Save Data");
-    ui.add_space(16.0);
-    ui.horizontal(|ui| {
-        ui.label("Team name: ");
-        ui.add(
-            TextEdit::singleline(&mut state.team_name_buf)
-                .char_limit(10)
-                .hint_text("Team name"),
-        );
-    });
-    ui.horizontal(|ui| {
-        ui.label("Held money: ");
-        ui.add(DragValue::new(&mut state.held_money).speed(50.0));
-    });
-    ui.horizontal(|ui| {
-        ui.label("Sp Episode held money: ");
-        ui.add(DragValue::new(&mut state.sp_episode_held_money).speed(50.0));
-    });
-    ui.horizontal(|ui| {
-        ui.label("Stored money: ");
-        ui.add(DragValue::new(&mut state.stored_money).speed(50.0));
-    });
-    ui.horizontal(|ui| {
-        ui.label("Explorer rank: ");
-        ui.add(DragValue::new(&mut state.explorer_rank).speed(25.0));
-    });
-    ui.horizontal(|ui| {
-        ui.label("Number of adventures: ");
-        ui.add(DragValue::new(&mut state.number_of_adventures).speed(0.25));
-    });
-}
-
-fn stored_ui(_state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave) {
-    ui.label("Display the stored Pokemon here.");
-}
-
-fn active_ui(_state: &mut ActivePokemonTab, ui: &mut Ui, _save: &mut SkySave) {
-    ui.label("Display the active Pokemon here.");
-}
-
-#[derive(Debug)]
-enum GuiTabState {
-    General(GeneralTab),
-    StoredPokemon(StoredPokemonTab),
-    ActivePokemon(ActivePokemonTab),
-}
-
-#[derive(Debug, Default)]
-struct GeneralTab {
-    team_name_buf: String,
-    held_money: u32,
-    sp_episode_held_money: u32,
-    stored_money: u32,
-    explorer_rank: u32,
-    number_of_adventures: i32,
-}
-
-impl GeneralTab {
-    pub fn new(save: &mut SkySave) -> Self {
-        Self {
-            team_name_buf: save.team_name().unwrap_or("???".into()),
-            held_money: save.held_money(),
-            sp_episode_held_money: save.sp_episode_held_money(),
-            stored_money: save.stored_money(),
-            explorer_rank: save.explorer_rank(),
-            number_of_adventures: save.number_of_adventurers(),
-        }
-    }
-}
-
-#[derive(Debug, Default)]
-struct StoredPokemonTab;
-
-#[derive(Debug, Default)]
-struct ActivePokemonTab;
-
-#[derive(Debug)]
-struct TabPane {
-    name: &'static str,
-    tab_state: GuiTabState,
-}
-
-#[derive(Debug)]
-struct TabsBehavior<'a> {
-    save: &'a mut SkySave,
-}
-
-impl<'a> Behavior<TabPane> for TabsBehavior<'a> {
-    fn pane_ui(&mut self, ui: &mut Ui, _tile_id: TileId, pane: &mut TabPane) -> UiResponse {
-        CentralPanel::default()
-            .frame(containers::Frame::default().outer_margin(Margin::symmetric(16.0, 16.0)))
-            .show_inside(ui, |ui| match &mut pane.tab_state {
-                GuiTabState::General(s) => general_ui(s, ui, self.save),
-                GuiTabState::StoredPokemon(s) => stored_ui(s, ui, self.save),
-                GuiTabState::ActivePokemon(s) => active_ui(s, ui, self.save),
-            });
-
-        UiResponse::None
-    }
-
-    fn tab_title_for_pane(&mut self, pane: &TabPane) -> WidgetText {
-        pane.name.into()
-    }
-
-    // Taken from the default implementation, changed to disable dragging.
-    fn tab_ui(
-        &mut self,
-        tiles: &mut Tiles<TabPane>,
-        ui: &mut Ui,
-        id: Id,
-        tile_id: TileId,
-        state: &TabState,
-    ) -> Response {
-        let text = self.tab_title_for_tile(tiles, tile_id);
-        let close_btn_size = Vec2::splat(self.close_button_outer_size());
-        let close_btn_left_padding = 4.0;
-        let font_id = TextStyle::Button.resolve(ui.style());
-        let galley = text.into_galley(ui, Some(egui::TextWrapMode::Extend), f32::INFINITY, font_id);
-
-        let x_margin = self.tab_title_spacing(ui.visuals());
-
-        let button_width = galley.size().x
-            + 2.0 * x_margin
-            + f32::from(state.closable) * (close_btn_left_padding + close_btn_size.x);
-        let (_, tab_rect) = ui.allocate_space(vec2(button_width, ui.available_height()));
-
-        let tab_response = ui.interact(tab_rect, id, Sense::click());
-
-        // Show a gap when dragged
-        if ui.is_rect_visible(tab_rect) && !state.is_being_dragged {
-            let bg_color = self.tab_bg_color(ui.visuals(), tiles, tile_id, state);
-            let stroke = self.tab_outline_stroke(ui.visuals(), tiles, tile_id, state);
-            ui.painter()
-                .rect(tab_rect.shrink(0.5), 0.0, bg_color, stroke);
-
-            if state.active {
-                // Make the tab name area connect with the tab ui area:
-                ui.painter().hline(
-                    tab_rect.x_range(),
-                    tab_rect.bottom(),
-                    Stroke::new(stroke.width + 1.0, bg_color),
-                );
-            }
-
-            // Prepare title's text for rendering
-            let text_color = self.tab_text_color(ui.visuals(), tiles, tile_id, state);
-            let text_position = egui::Align2::LEFT_CENTER
-                .align_size_within_rect(galley.size(), tab_rect.shrink(x_margin))
-                .min;
-
-            // Render the title
-            ui.painter().galley(text_position, galley, text_color);
-        }
-
-        self.on_tab_button(tiles, tile_id, tab_response)
-    }
-}
 
 #[derive(Debug)]
 enum Message {
@@ -246,11 +95,11 @@ impl SkySaveGui {
             },
             TabPane {
                 name: "Stored Pokemon",
-                tab_state: GuiTabState::StoredPokemon(StoredPokemonTab::default()),
+                tab_state: GuiTabState::StoredPokemon(StoredPokemonTab::new(save)),
             },
             TabPane {
                 name: "Active Pokemon",
-                tab_state: GuiTabState::ActivePokemon(ActivePokemonTab::default()),
+                tab_state: GuiTabState::ActivePokemon(ActivePokemonTab::new(save)),
             },
         ];
 
