@@ -99,7 +99,7 @@ impl StoredPokemon {
     pub fn iq_map(&self) -> IqMapBits {
         let mut map: IqMapBits = bitarr!(u8, Lsb0; 0; 69);
         let view = &self.0[pokemon::IQ_MAP];
-        map.copy_from_bitslice(view);
+        map[0..69].copy_from_bitslice(view);
 
         map
     }
