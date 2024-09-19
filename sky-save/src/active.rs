@@ -54,11 +54,11 @@ impl ActivePokemon {
         self.0[pokemon::LEVEL].load_le()
     }
 
-    pub fn met_at(&self) -> u32 {
+    pub fn met_at(&self) -> u8 {
         self.0[pokemon::MET_AT].load_le()
     }
 
-    pub fn met_floor(&self) -> u16 {
+    pub fn met_floor(&self) -> u8 {
         self.0[pokemon::MET_FLOOR].load_le()
     }
 
@@ -98,7 +98,7 @@ impl ActivePokemon {
         self.0[pokemon::SP_DEFENSE].load_le()
     }
 
-    pub fn exp(&self) -> u64 {
+    pub fn exp(&self) -> u32 {
         self.0[pokemon::EXP].load_le()
     }
 
