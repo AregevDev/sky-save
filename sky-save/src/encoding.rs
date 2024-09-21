@@ -11,58 +11,41 @@ const SEQUENCES: &[&str] = &[
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Hash)]
-enum CharType {
-    Single { utf8: char, pmd: u8 },
-    Sequence { pmd: u8 },
+pub struct PmdChar {
+    pmd: u8,
+    utf8: char,
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Hash)]
-pub struct PmdChar(CharType);
 
 impl PmdChar {
     pub fn from_sequence(seq: &str) -> Result<Self, EncodingError> {
         let pmd = pmd_seq_to_byte(seq)?;
 
-        match seq.chars().count() {
-            1 => Ok(PmdChar(CharType::Single {
-                utf8: seq.chars().next().unwrap(),
-                pmd,
-            })),
-            2..=5 => Ok(PmdChar(CharType::Sequence { pmd })),
-            _ => Err(EncodingError::InvalidPmdCharacter(seq.to_string())),
-        }
+        let utf8 = if SEQUENCES.contains(&seq) {
+            pmd as char
+        } else {
+            seq.chars().next().unwrap()
+        };
+
+        Ok(PmdChar { pmd, utf8 })
     }
 
     pub fn to_sequence(&self) -> String {
-        match self.0 {
-            CharType::Single { utf8: _, pmd } => byte_to_pmd_seq(pmd).unwrap().to_string(),
-            CharType::Sequence { pmd } => byte_to_pmd_seq(pmd).unwrap().to_string(),
-        }
+        byte_to_pmd_seq(self.pmd).unwrap().to_string()
     }
 
-    pub fn to_utf8(&self) -> char {
-        match self.0 {
-            CharType::Single { utf8, pmd: _ } => utf8,
-            CharType::Sequence { pmd } => pmd as char,
-        }
+    pub fn as_utf8(&self) -> char {
+        self.utf8
     }
 }
 
 impl From<u8> for PmdChar {
     fn from(value: u8) -> Self {
         let pmd = byte_to_pmd_seq(value).unwrap();
-        if SEQUENCES.contains(&pmd.as_str()) {
-            return PmdChar(CharType::Sequence { pmd: value });
-        }
-
-        PmdChar(CharType::Single {
-            utf8: pmd.chars().next().unwrap(),
-            pmd: value,
-        })
+        PmdChar::from_sequence(pmd.as_str()).unwrap()
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct PmdString(ArrayVec<PmdChar, 10>);
 
 impl PmdString {
@@ -80,7 +63,7 @@ impl Display for PmdString {
         write!(
             f,
             "{}",
-            self.0.iter().map(|&c| c.to_utf8()).collect::<String>()
+            self.0.iter().map(|&c| c.as_utf8()).collect::<String>()
         )
     }
 }
@@ -97,6 +80,7 @@ impl From<&[u8]> for PmdString {
         for &b in value {
             result.0.push(PmdChar::from(b));
         }
+
         result
     }
 }
@@ -113,13 +97,16 @@ impl TryFrom<&str> for PmdString {
                 '[' => {
                     let seq: String = chars_iter.by_ref().take_while(|&c| c != ']').collect();
                     let pmd = pmd_seq_to_byte(&format!("[{}]", seq))?;
-                    result.0.push(PmdChar(CharType::Sequence { pmd }));
+                    result.0.push(PmdChar {
+                        utf8: pmd as char,
+                        pmd,
+                    });
                 }
                 _ => {
                     let mut buf = [0; 4];
-                    let pmd = c.encode_utf8(&mut buf);
-                    let pmd = pmd_seq_to_byte(pmd)?;
-                    result.0.push(PmdChar(CharType::Single { utf8: c, pmd }));
+                    let seq = c.encode_utf8(&mut buf);
+                    let pmd = pmd_seq_to_byte(seq)?;
+                    result.0.push(PmdChar { utf8: c, pmd });
                 }
             }
         }

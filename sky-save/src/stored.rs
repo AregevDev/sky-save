@@ -136,4 +136,14 @@ impl StoredPokemon {
 
         PmdString::from(bytes.into_vec().as_slice())
     }
+
+    pub fn name_until_nul(&self) -> PmdString {
+        let bits = &self.0[pokemon::NAME];
+        let mut bytes = bits.to_owned();
+        bytes.force_align();
+
+        let bytes = bytes.into_vec();
+        let until = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
+        PmdString::from(&bytes[..until])
+    }
 }

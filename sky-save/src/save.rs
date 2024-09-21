@@ -104,6 +104,12 @@ impl SkySave {
         PmdString::from(bytes)
     }
 
+    pub fn team_name_until_nul(&self) -> PmdString {
+        let bytes = self.load_save_slice(general::TEAM_NAME);
+        let until = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
+        PmdString::from(&bytes[..until])
+    }
+
     pub fn held_money(&self) -> u32 {
         let bits = &self
             .load_save_slice(general::HELD_MONEY)
