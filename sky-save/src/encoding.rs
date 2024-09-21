@@ -1,31 +1,47 @@
+//! This module handles strings represented by the PMD character encoding.
+//! Save file strings have one byte per character and are encoded using a custom character encoding, which is a mix of ASCII, Unicode and special sequences.
+//! Special sequences are wrapped in square brackets.
+//!
+//! Example: The byte representation for the sequence `Abcd[END]` will be `[0x41, 0x62, 0x63, 0x64, 0x00]`.
+//! The character `[` is not a valid PMD character, making parsing special sequences easier.
+//!
+//! See <https://projectpokemon.org/home/docs/mystery-dungeon-nds/explorers-of-sky-save-structure-r62> for more information.
+
 use crate::EncodingError;
 use arrayvec::ArrayVec;
 use std::fmt::Display;
 
+/// A single PMD-encoded character.
+/// Holds both the PMD encoded byte and its UTF-8 representation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub struct PmdChar {
+    /// The PMD encoded byte.
     pub pmd: u8,
+    /// The UTF-8 representation of the character.
     pub utf8: char,
 }
 
 impl PmdChar {
+    /// Parses a single character or a special sequence into a `PmdChar`.
     pub fn from_sequence(seq: &str) -> Result<Self, EncodingError> {
         let pmd = pmd_seq_to_byte(seq)?;
 
         let utf8 = match seq.chars().next() {
             Some(c) if c == '[' => pmd as char,
             Some(c) => c,
-            _ => unreachable!(),
+            _ => unreachable!(), // Safe, seq is valid and not empty at this point.
         };
 
         Ok(PmdChar { pmd, utf8 })
     }
 
+    /// Converts a PMD character to its sequence representation.
     pub fn to_sequence(&self) -> String {
         byte_to_pmd_seq(self.pmd).unwrap().to_string()
     }
 }
 
+/// Converts a PMD-encoded byte to a PMD character.
 impl From<u8> for PmdChar {
     fn from(value: u8) -> Self {
         let pmd = byte_to_pmd_seq(value).unwrap();
@@ -33,7 +49,9 @@ impl From<u8> for PmdChar {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+/// A string represented by the PMD character encoding, backed by an `ArrayVec`.
+/// Save file strings (team names, pokemon names) have 10 byte memory location.
+/// The game stops displaying the strings when it reaches a null byte.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct PmdString(ArrayVec<PmdChar, 10>);
 
@@ -42,10 +60,12 @@ impl PmdString {
         Self(ArrayVec::new())
     }
 
+    /// Converts the string to a sequence of PMD characters.
     pub fn to_sequence(&self) -> String {
         self.0.iter().map(|&c| c.to_sequence()).collect()
     }
 
+    /// Converts to a 10-byte array of PMD encoded bytes.
     pub fn to_save_bytes(&self) -> [u8; 10] {
         self.0.iter().enumerate().fold([0; 10], |mut result, (i, c)| {
             result[i] = c.pmd;
@@ -54,6 +74,8 @@ impl PmdString {
     }
 }
 
+/// Converts a PMD string to a UTF-8 string.
+/// Does not ignore null bytes.
 impl Display for PmdString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -70,6 +92,7 @@ impl Default for PmdString {
     }
 }
 
+/// Converts a PMD-encoded byte slice to a `PmdString`.
 impl From<&[u8]> for PmdString {
     fn from(value: &[u8]) -> Self {
         let mut result = PmdString::new();
@@ -81,6 +104,7 @@ impl From<&[u8]> for PmdString {
     }
 }
 
+/// Parses a sequence of PMD characters to a `PmdString`.
 impl TryFrom<&str> for PmdString {
     type Error = EncodingError;
 
