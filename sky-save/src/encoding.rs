@@ -103,6 +103,15 @@ impl From<&[u8]> for PmdString {
     }
 }
 
+/// Converts a PMD-encoded string to a byte vector.
+/// Does not ignore null bytes.
+/// Does not fill the vector to 10 bytes.
+impl From<PmdString> for Vec<u8> {
+    fn from(value: PmdString) -> Self {
+        value.0.iter().map(|c| c.pmd).collect::<Vec<_>>()
+    }
+}
+
 /// Parses a sequence of PMD characters to a `PmdString`.
 impl TryFrom<&str> for PmdString {
     type Error = EncodingError;
@@ -725,4 +734,12 @@ fn test_pmd_string_to_save_bytes() {
         pmd.to_save_bytes(),
         [0x00, 0x00, 0x00, 0xC4, 0x88, 0x7E, 0x00, 0x00, 0x00, 0x00]
     );
+}
+
+#[test]
+fn test_pmd_string_to_vec() {
+    let pmd = PmdString::from([0xC4, 0x88, 0x7E].as_slice());
+    let vec = Vec::from(pmd);
+
+    assert_eq!(vec.as_slice(), &[0xC4, 0x88, 0x7E]);
 }
