@@ -135,6 +135,14 @@ impl ActivePokemon {
         self.0[pokemon::TACTIC].load_le()
     }
 
+    pub fn name(&self) -> PmdString {
+        let bits = &self.0[crate::offsets::stored::pokemon::NAME];
+        let mut bytes = bits.to_owned();
+        bytes.force_align();
+
+        PmdString::from(bytes.into_vec().as_slice())
+    }
+
     pub fn name_until_nul(&self) -> PmdString {
         let bits = &self.0[pokemon::NAME];
         let mut bytes = bits.to_owned();
