@@ -34,6 +34,7 @@ impl From<u8> for PmdChar {
 }
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct PmdString(ArrayVec<PmdChar, 10>);
 
 impl PmdString {
@@ -92,7 +93,7 @@ impl TryFrom<&str> for PmdString {
                 '[' => {
                     let seq: String = chars_iter.by_ref().take_while(|&c| c != ']').collect();
                     let pmd = pmd_seq_to_byte(&format!("[{}]", seq))?;
-                    result.0.try_push(PmdChar { utf8: c, pmd }).map_err(|_| {
+                    result.0.try_push(PmdChar { utf8: pmd as char, pmd }).map_err(|_| {
                         EncodingError::InvalidPmdStringLen
                     })?;
                 }
