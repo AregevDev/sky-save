@@ -1,5 +1,6 @@
 use crate::EncodingError;
 use arrayvec::ArrayVec;
+use std::fmt::Display;
 
 const SEQUENCES: &[&str] = &[
     "[END]", "[$01]", "[$02]", "[$03]", "[$04]", "[$05]", "[$06]", "[$07]", "[$08]", "[$09]",
@@ -61,16 +62,6 @@ impl From<u8> for PmdChar {
     }
 }
 
-// Converts a PMD character to a sequence string.
-impl From<PmdChar> for String {
-    fn from(value: PmdChar) -> Self {
-        match value.0 {
-            CharType::Single { utf8: _, pmd } => byte_to_pmd_seq(pmd).unwrap(),
-            CharType::Sequence { pmd } => byte_to_pmd_seq(pmd).unwrap(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct PmdString(ArrayVec<PmdChar, 10>);
 
@@ -80,11 +71,17 @@ impl PmdString {
     }
 
     pub fn to_sequence(&self) -> String {
-        self.0.iter().map(|&c| String::from(c)).collect()
+        self.0.iter().map(|&c| c.to_sequence()).collect()
     }
+}
 
-    pub fn to_utf8(&self) -> String {
-        self.0.iter().map(|&c| c.to_utf8()).collect::<String>()
+impl Display for PmdString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.0.iter().map(|&c| c.to_utf8()).collect::<String>()
+        )
     }
 }
 
