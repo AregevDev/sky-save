@@ -45,12 +45,12 @@ impl PmdChar {
 impl From<u8> for PmdChar {
     fn from(value: u8) -> Self {
         let pmd = byte_to_pmd_seq(value).unwrap();
-        PmdChar::from_sequence(pmd.as_str()).unwrap()
+        PmdChar::from_sequence(pmd).unwrap()
     }
 }
 
 /// A string represented by the PMD character encoding, backed by an `ArrayVec`.
-/// Save file strings (team names, pokemon names) have 10 byte memory location.
+/// Save file strings (team names, Pokémon names) have 10 byte memory location.
 /// The game stops displaying the strings when it reaches a null byte.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct PmdString(ArrayVec<PmdChar, 10>);
@@ -402,7 +402,7 @@ fn pmd_seq_to_byte(s: &str) -> Result<u8, EncodingError> {
     }
 }
 
-fn byte_to_pmd_seq(byte: u8) -> Result<String, EncodingError> {
+fn byte_to_pmd_seq(byte: u8) -> Result<&'static str, EncodingError> {
     match byte {
         0x00 => Ok("[END]".into()),
         0x01 => Ok("[$01]".into()),
