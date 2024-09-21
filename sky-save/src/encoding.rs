@@ -4,8 +4,8 @@ use std::fmt::Display;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub struct PmdChar {
-    pmd: u8,
-    utf8: char,
+    pub pmd: u8,
+    pub utf8: char,
 }
 
 impl PmdChar {
@@ -23,10 +23,6 @@ impl PmdChar {
 
     pub fn to_sequence(&self) -> String {
         byte_to_pmd_seq(self.pmd).unwrap().to_string()
-    }
-
-    pub fn as_utf8(&self) -> char {
-        self.utf8
     }
 }
 
@@ -48,6 +44,13 @@ impl PmdString {
     pub fn to_sequence(&self) -> String {
         self.0.iter().map(|&c| c.to_sequence()).collect()
     }
+
+    pub fn to_save_bytes(&self) -> [u8; 10] {
+        self.0.iter().enumerate().fold([0; 10], |mut result, (i, c)| {
+            result[i] = c.pmd;
+            result
+        })
+    }
 }
 
 impl Display for PmdString {
@@ -55,7 +58,7 @@ impl Display for PmdString {
         write!(
             f,
             "{}",
-            self.0.iter().map(|&c| c.as_utf8()).collect::<String>()
+            self.0.iter().map(|&c| c.utf8).collect::<String>()
         )
     }
 }
