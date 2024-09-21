@@ -1,9 +1,8 @@
 use crate::consts::MIN_SAVE_LEN;
-use crate::encoding::pmd_to_string;
 use crate::error::SaveError;
 use crate::offsets::save::{BACKUP_SAVE, PRIMARY_SAVE};
 use crate::offsets::{active, general, save, stored};
-use crate::{ActivePokemon, ActivePokemonBits, EncodingError, StoredPokemon, StoredPokemonBits};
+use crate::{ActivePokemon, ActivePokemonBits, PmdString, StoredPokemon, StoredPokemonBits};
 use bitvec::bitarr;
 use bitvec::field::BitField;
 use bitvec::order::Lsb0;
@@ -100,9 +99,15 @@ impl SkySave {
         Self::from_slice(&data)
     }
 
-    pub fn team_name(&self) -> Result<String, EncodingError> {
+    pub fn team_name(&self) -> PmdString {
         let bytes = self.load_save_slice(general::TEAM_NAME);
-        pmd_to_string(bytes)
+        PmdString::from(bytes)
+    }
+
+    pub fn team_name_until_nul(&self) -> PmdString {
+        let bytes = self.load_save_slice(general::TEAM_NAME);
+        let until = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
+        PmdString::from(&bytes[..until])
     }
 
     pub fn held_money(&self) -> u32 {

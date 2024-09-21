@@ -29,5 +29,7 @@ pub enum SaveError {
 #[derive(Debug, Error)]
 pub enum EncodingError {
     #[error("Invalid PMD character: {0}")]
-    InvalidCharacter(u8),
+    InvalidPmdCharacter(String),
+    #[error("PMD String must not exceed 10 characters")]
+    InvalidPmdStringLen,
 }
