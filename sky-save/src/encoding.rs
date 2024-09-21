@@ -2,14 +2,6 @@ use crate::EncodingError;
 use arrayvec::ArrayVec;
 use std::fmt::Display;
 
-const SEQUENCES: &[&str] = &[
-    "[END]", "[$01]", "[$02]", "[$03]", "[$04]", "[$05]", "[$06]", "[$07]", "[$08]", "[$09]",
-    "[$0A]", "[$0B]", "[$0C]", "[$0D]", "[$0E]", "[$0F]", "[$10]", "[$11]", "[$12]", "[$13]",
-    "[$14]", "[$15]", "[$16]", "[$17]", "[$18]", "[$19]", "[$1A]", "[$1B]", "[$1C]", "[$1D]",
-    "[$1E]", "[$1F]", "[$5B]", "[$7E]", "[$7F]", "[$81]", "[$82]", "[$83]", "[$84]", "[$87]",
-    "[e]", "[è]", "[er]", "[re]",
-];
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub struct PmdChar {
     pmd: u8,
@@ -20,10 +12,10 @@ impl PmdChar {
     pub fn from_sequence(seq: &str) -> Result<Self, EncodingError> {
         let pmd = pmd_seq_to_byte(seq)?;
 
-        let utf8 = if SEQUENCES.contains(&seq) {
-            pmd as char
-        } else {
-            seq.chars().next().unwrap()
+        let utf8 = match seq.chars().next() {
+            Some(c) if c == '[' => pmd as char,
+            Some(c) => c,
+            _ => unreachable!(),
         };
 
         Ok(PmdChar { pmd, utf8 })
@@ -97,16 +89,17 @@ impl TryFrom<&str> for PmdString {
                 '[' => {
                     let seq: String = chars_iter.by_ref().take_while(|&c| c != ']').collect();
                     let pmd = pmd_seq_to_byte(&format!("[{}]", seq))?;
-                    result.0.push(PmdChar {
-                        utf8: pmd as char,
-                        pmd,
-                    });
+                    result.0.try_push(PmdChar { utf8: c, pmd }).map_err(|_| {
+                        EncodingError::InvalidPmdStringLen
+                    })?;
                 }
                 _ => {
                     let mut buf = [0; 4];
                     let seq = c.encode_utf8(&mut buf);
                     let pmd = pmd_seq_to_byte(seq)?;
-                    result.0.push(PmdChar { utf8: c, pmd });
+                    result.0.try_push(PmdChar { utf8: c, pmd }).map_err(|_| {
+                        EncodingError::InvalidPmdStringLen
+                    })?;
                 }
             }
         }
