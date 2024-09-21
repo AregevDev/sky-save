@@ -11,4 +11,3 @@ readme = "../README.md"
 [dependencies]
 bitvec = "1.0.1"
 thiserror = "1.0.63"
-arrayvec = "0.7.6"

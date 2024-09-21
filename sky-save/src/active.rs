@@ -1,5 +1,5 @@
 use crate::offsets::active::{moves, pokemon};
-use crate::{IqMapBits, PmdString};
+use crate::{pmd_to_string, EncodingError, IqMapBits};
 use bitvec::prelude::*;
 
 pub type ActivePokemonBits = BitArr!(for 546, in u8, Lsb0);
@@ -135,13 +135,11 @@ impl ActivePokemon {
         self.0[pokemon::TACTIC].load_le()
     }
 
-    pub fn name_until_nul(&self) -> PmdString {
+    pub fn name(&self) -> Result<String, EncodingError> {
         let bits = &self.0[pokemon::NAME];
         let mut bytes = bits.to_owned();
         bytes.force_align();
 
-        let bytes = bytes.into_vec();
-        let until = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
-        PmdString::from(&bytes[..until])
+        pmd_to_string(bytes.into_vec().as_slice())
     }
 }

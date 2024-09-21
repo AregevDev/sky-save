@@ -2580,7 +2580,6 @@ dependencies = [
 name = "sky-save"
 version = "0.0.0"
 dependencies = [
- "arrayvec",
  "bitvec",
  "thiserror",
 ]
