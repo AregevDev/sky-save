@@ -67,10 +67,13 @@ impl PmdString {
 
     /// Converts to a 10-byte array of PMD encoded bytes.
     pub fn to_save_bytes(&self) -> [u8; 10] {
-        self.0.iter().enumerate().fold([0; 10], |mut result, (i, c)| {
-            result[i] = c.pmd;
-            result
-        })
+        self.0
+            .iter()
+            .enumerate()
+            .fold([0; 10], |mut result, (i, c)| {
+                result[i] = c.pmd;
+                result
+            })
     }
 }
 
@@ -78,11 +81,7 @@ impl PmdString {
 /// Does not ignore null bytes.
 impl Display for PmdString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.0.iter().map(|&c| c.utf8).collect::<String>()
-        )
+        write!(f, "{}", self.0.iter().map(|&c| c.utf8).collect::<String>())
     }
 }
 
@@ -117,17 +116,22 @@ impl TryFrom<&str> for PmdString {
                 '[' => {
                     let seq: String = chars_iter.by_ref().take_while(|&c| c != ']').collect();
                     let pmd = pmd_seq_to_byte(&format!("[{}]", seq))?;
-                    result.0.try_push(PmdChar { utf8: pmd as char, pmd }).map_err(|_| {
-                        EncodingError::InvalidPmdStringLen
-                    })?;
+                    result
+                        .0
+                        .try_push(PmdChar {
+                            utf8: pmd as char,
+                            pmd,
+                        })
+                        .map_err(|_| EncodingError::InvalidPmdStringLen)?;
                 }
                 _ => {
                     let mut buf = [0; 4];
                     let seq = c.encode_utf8(&mut buf);
                     let pmd = pmd_seq_to_byte(seq)?;
-                    result.0.try_push(PmdChar { utf8: c, pmd }).map_err(|_| {
-                        EncodingError::InvalidPmdStringLen
-                    })?;
+                    result
+                        .0
+                        .try_push(PmdChar { utf8: c, pmd })
+                        .map_err(|_| EncodingError::InvalidPmdStringLen)?;
                 }
             }
         }
@@ -660,31 +664,65 @@ fn byte_to_pmd_seq(byte: u8) -> Result<String, EncodingError> {
 }
 
 #[test]
-fn test_round_trip() {
-    let seq = ["A", "b", "c", "[er]"];
-    let bytes = seq
-        .iter()
-        .map(|&c| pmd_seq_to_byte(c).unwrap())
-        .collect::<Vec<u8>>();
+fn test_char_round_trip() {
+    let ch = PmdChar::from_sequence("A").unwrap();
+    assert_eq!(ch.utf8, 'A');
+    assert_eq!(ch.pmd, 0x41);
+    let pmd = PmdChar::from(0x41);
+    assert_eq!(ch, pmd);
+}
 
-    assert_eq!(
-        bytes
-            .iter()
-            .map(|&b| byte_to_pmd_seq(b).unwrap())
-            .collect::<Vec<String>>(),
-        seq
-    );
+#[test]
+fn test_char_special_trip() {
+    let ch = PmdChar::from_sequence("[er]").unwrap();
+    assert_eq!(ch.utf8, '\u{96}');
+    assert_eq!(ch.pmd, 0x96);
+    let pmd = PmdChar::from(0x96);
+    assert_eq!(ch, pmd);
 }
 
 #[test]
 #[should_panic]
-fn test_invalid_sequence() {
-    let invalid = "{BLH]";
-    PmdChar::from_sequence(invalid).unwrap();
+
+fn test_char_invalid_sequence() {
+    PmdChar::from_sequence("[LOL]").unwrap();
+}
+
+#[test]
+fn test_char_to_sequence() {
+    let ch = PmdChar::from(0x8D);
+    assert_eq!(ch.to_sequence(), "[e]");
 }
 
 #[test]
 fn test_pmd_string_parse() {
-    let str = "Oak[END]";
-    PmdString::try_from(str).unwrap();
+    let seq = "Oak[END]";
+    PmdString::try_from(seq).unwrap();
+}
+
+#[test]
+#[should_panic]
+fn test_pmd_string_invalid_len() {
+    PmdString::try_from("OakOakOakOak").unwrap();
+}
+
+#[test]
+fn test_pmd_string_to_sequence() {
+    let pmd = PmdString::from([0x00, 0x00, 0x00, 0xC4, 0x88, 0x7E].as_slice());
+    assert_eq!(pmd.to_sequence(), "[END][END][END]Äˆ[$7E]");
+}
+
+#[test]
+fn test_pmd_string_to_string() {
+    let pmd = PmdString::from([0x00, 0x00, 0x00, 0xC4, 0x88, 0x7E].as_slice());
+    assert_eq!(pmd.to_string(), "\0\0\0Äˆ~");
+}
+
+#[test]
+fn test_pmd_string_to_save_bytes() {
+    let pmd = PmdString::from([0x00, 0x00, 0x00, 0xC4, 0x88, 0x7E].as_slice());
+    assert_eq!(
+        pmd.to_save_bytes(),
+        [0x00, 0x00, 0x00, 0xC4, 0x88, 0x7E, 0x00, 0x00, 0x00, 0x00]
+    );
 }
