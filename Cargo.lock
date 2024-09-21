@@ -224,13 +224,13 @@ dependencies = [
  "futures-channel",
  "futures-util",
  "rand",
-    "raw-window-handle 0.6.2",
+ "raw-window-handle 0.6.2",
  "serde",
  "serde_repr",
  "url",
-    "wayland-backend",
-    "wayland-client",
-    "wayland-protocols 0.32.4",
+ "wayland-backend",
+ "wayland-client",
+ "wayland-protocols 0.32.4",
  "zbus 4.4.0",
 ]
 
@@ -1028,7 +1028,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
-    "web-time 0.2.4",
+ "web-time 0.2.4",
  "wgpu",
  "winapi",
  "winit",
@@ -1063,7 +1063,7 @@ dependencies = [
  "log",
  "thiserror",
  "type-map",
-    "web-time 0.2.4",
+ "web-time 0.2.4",
  "wgpu",
  "winit",
 ]
@@ -1081,7 +1081,7 @@ dependencies = [
  "log",
  "raw-window-handle 0.6.2",
  "smithay-clipboard",
-    "web-time 0.2.4",
+ "web-time 0.2.4",
  "webbrowser",
  "winit",
 ]
@@ -1136,8 +1136,8 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fa006333a04fb5ed773a5e963bb366831046f6f462b7528059924deae008f8a0"
 dependencies = [
-    "egui",
-    "web-time 1.1.0",
+ "egui",
+ "web-time 1.1.0",
 ]
 
 [[package]]
@@ -2249,7 +2249,7 @@ checksum = "0ee638a5da3799329310ad4cfa62fbf045d5f56e3ef5ba4149e7452dcf89d5a8"
 dependencies = [
  "bitflags 2.6.0",
  "block2 0.5.1",
-    "dispatch",
+ "dispatch",
  "libc",
  "objc2 0.5.2",
 ]
@@ -2617,12 +2617,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8af382a047821a08aa6bfc09ab0d80ff48d45d8726f7cd8e44891f7cb4a4278e"
 dependencies = [
  "ashpd",
-    "block2 0.5.1",
+ "block2 0.5.1",
  "js-sys",
  "log",
-    "objc2 0.5.2",
-    "objc2-app-kit",
-    "objc2-foundation",
+ "objc2 0.5.2",
+ "objc2-app-kit",
+ "objc2-foundation",
  "pollster",
  "raw-window-handle 0.6.2",
  "urlencoding",
@@ -2779,7 +2779,7 @@ dependencies = [
  "eframe",
  "egui_extras",
  "egui_tiles",
-    "egui_virtual_list",
+ "egui_virtual_list",
  "rfd",
  "sky-save",
  "winres",
@@ -3447,8 +3447,8 @@ version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
 dependencies = [
-    "js-sys",
-    "wasm-bindgen",
+ "js-sys",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -3920,7 +3920,7 @@ dependencies = [
  "wayland-protocols 0.31.2",
  "wayland-protocols-plasma",
  "web-sys",
-    "web-time 0.2.4",
+ "web-time 0.2.4",
  "windows-sys 0.48.0",
  "x11-dl",
  "x11rb",

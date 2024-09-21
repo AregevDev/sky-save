@@ -27,7 +27,7 @@ pub struct GeneralTab {
 impl GeneralTab {
     pub fn new(save: &mut SkySave) -> Self {
         Self {
-            team_name_buf: save.team_name().unwrap_or("???".into()),
+            team_name_buf: save.team_name().to_string(),
             held_money: save.held_money(),
             sp_episode_held_money: save.sp_episode_held_money(),
             stored_money: save.stored_money(),
@@ -139,7 +139,7 @@ impl StoredPokemonState {
                 StoredMoveState::from_stored(&moves[2]),
                 StoredMoveState::from_stored(&moves[3]),
             ],
-            name: stored.name().unwrap(),
+            name: stored.name_until_nul().to_sequence()
         }
     }
 }
@@ -189,7 +189,7 @@ pub fn stored_ui(state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave)
                                         if ui
                                             .selectable_label(
                                                 index == state.current,
-                                                state.stored[index].name().unwrap().to_string(),
+                                                state.stored[index].name_until_nul().to_sequence(),
                                             )
                                             .clicked()
                                         {
@@ -384,7 +384,7 @@ impl ActivePokemonState {
             ],
             iq_map: active.iq_map(),
             tactic: active.tactic(),
-            name: active.name().unwrap(),
+            name: active.name_until_nul().to_sequence(),
         }
     }
 }
@@ -434,7 +434,7 @@ pub fn active_ui(state: &mut ActivePokemonTab, ui: &mut Ui, _save: &mut SkySave)
                                         if ui
                                             .selectable_label(
                                                 index == state.current,
-                                                state.active[index].name().unwrap().to_string(),
+                                                state.active[index].name_until_nul().to_sequence(),
                                             )
                                             .clicked()
                                         {
