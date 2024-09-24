@@ -1,7 +1,8 @@
 use eframe::egui;
 use eframe::egui::{
-    containers, vec2, Align, CentralPanel, CollapsingHeader, DragValue, Id, Layout, Margin,
-    Response, ScrollArea, Sense, Stroke, TextEdit, TextStyle, Ui, Vec2, WidgetText,
+    containers, vec2, Align, CentralPanel, CollapsingHeader, Color32, DragValue, Id, Layout,
+    Margin, Response, RichText, ScrollArea, Sense, Stroke, TextEdit, TextStyle, Ui, Vec2,
+    WidgetText,
 };
 use egui_tiles::{Behavior, TabState, TileId, Tiles, UiResponse};
 use egui_virtual_list::VirtualList;
@@ -139,7 +140,7 @@ impl StoredPokemonState {
                 StoredMoveState::from_stored(&moves[2]),
                 StoredMoveState::from_stored(&moves[3]),
             ],
-            name: stored.name_until_nul().to_sequence()
+            name: stored.name_until_nul().to_sequence(),
         }
     }
 }
@@ -167,6 +168,7 @@ impl StoredPokemonTab {
     }
 }
 
+//noinspection ALL
 pub fn stored_ui(state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave) {
     ui.heading("Stored Pokemon");
     ui.add_space(16.0);
@@ -186,13 +188,17 @@ pub fn stored_ui(state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave)
                                 ui.with_layout(
                                     Layout::top_down(Align::Min).with_cross_justify(true),
                                     |ui| {
-                                        if ui
-                                            .selectable_label(
-                                                index == state.current,
+                                        let selected = index == state.current;
+                                        let text = if state.stored[index].valid() {
+                                            RichText::new(
                                                 state.stored[index].name_until_nul().to_sequence(),
                                             )
-                                            .clicked()
-                                        {
+                                        } else {
+                                            RichText::new("[Empty]")
+                                                .color(Color32::from_hex("#666666").unwrap())
+                                        };
+
+                                        if ui.selectable_label(selected, text).clicked() {
                                             state.current = index;
                                             state.item_state = StoredPokemonState::from_stored(
                                                 &state.stored[index],
@@ -412,6 +418,7 @@ impl ActivePokemonTab {
     }
 }
 
+//noinspection ALL
 pub fn active_ui(state: &mut ActivePokemonTab, ui: &mut Ui, _save: &mut SkySave) {
     ui.heading("Active Pokemon");
     ui.add_space(16.0);
@@ -431,13 +438,17 @@ pub fn active_ui(state: &mut ActivePokemonTab, ui: &mut Ui, _save: &mut SkySave)
                                 ui.with_layout(
                                     Layout::top_down(Align::Min).with_cross_justify(true),
                                     |ui| {
-                                        if ui
-                                            .selectable_label(
-                                                index == state.current,
+                                        let selected = index == state.current;
+                                        let text = if state.active[index].valid() {
+                                            RichText::new(
                                                 state.active[index].name_until_nul().to_sequence(),
                                             )
-                                            .clicked()
-                                        {
+                                        } else {
+                                            RichText::new("[Empty]")
+                                                .color(Color32::from_hex("#666666").unwrap())
+                                        };
+
+                                        if ui.selectable_label(selected, text).clicked() {
                                             state.current = index;
                                             state.item_state = ActivePokemonState::from_active(
                                                 &state.active[index],
