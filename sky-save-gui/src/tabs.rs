@@ -418,7 +418,6 @@ impl ActivePokemonTab {
     }
 }
 
-//noinspection ALL
 pub fn active_ui(state: &mut ActivePokemonTab, ui: &mut Ui, _save: &mut SkySave) {
     ui.heading("Active Pokemon");
     ui.add_space(16.0);
