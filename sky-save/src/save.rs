@@ -1,12 +1,12 @@
 use crate::consts::MIN_SAVE_LEN;
 use crate::error::SaveError;
-use crate::offsets::save::{BACKUP_SAVE, PRIMARY_SAVE};
 use crate::offsets::{active, general, save, stored};
-use crate::{ActivePokemon, ActivePokemonBits, PmdString, StoredPokemon, StoredPokemonBits};
-use bitvec::bitarr;
+use crate::{ActivePokemon, PmdString, StoredPokemon};
+use arrayvec::ArrayVec;
 use bitvec::field::BitField;
 use bitvec::order::Lsb0;
 use bitvec::slice::BitSlice;
+use bitvec::vec::BitVec;
 use bitvec::view::BitView;
 use std::fs;
 use std::ops::Range;
@@ -20,11 +20,134 @@ fn checksum(data: &[u8], data_range: Range<usize>) -> [u8; 4] {
         .to_le_bytes()
 }
 
+pub fn load_save_slice(
+    data: &[u8],
+    active_save_block: ActiveSaveBlock,
+    range: Range<usize>,
+) -> &[u8] {
+    &data[range.start + active_save_block as usize..range.end + active_save_block as usize]
+}
+
+pub fn store_save_slice(
+    data: &mut [u8],
+    active_save_block: ActiveSaveBlock,
+    range: Range<usize>,
+    value: &[u8],
+) {
+    data[range.start + active_save_block as usize..range.end + active_save_block as usize]
+        .copy_from_slice(value);
+}
+
+pub fn load_save_bits(
+    data: &BitSlice<u8, Lsb0>,
+    active_save_block: ActiveSaveBlock,
+    range: Range<usize>,
+) -> &BitSlice<u8, Lsb0> {
+    &data[range.start + active_save_block as usize * 8..range.end + active_save_block as usize * 8]
+}
+
+pub fn store_save_bits(
+    data: &mut BitSlice<u8, Lsb0>,
+    active_save_block: ActiveSaveBlock,
+    range: Range<usize>,
+    value: &BitSlice<u8, Lsb0>,
+) {
+    data[range.start + active_save_block as usize * 8..range.end + active_save_block as usize * 8]
+        .copy_from_bitslice(value);
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(usize)]
 pub enum ActiveSaveBlock {
-    Primary = PRIMARY_SAVE.start,
-    Backup = BACKUP_SAVE.start,
+    Primary = save::PRIMARY_SAVE.start,
+    Backup = save::BACKUP_SAVE.start,
+}
+
+#[derive(Debug)]
+pub struct General {
+    pub team_name: PmdString,
+    pub held_money: u32,
+    pub sp_episode_held_money: u32,
+    pub stored_money: u32,
+    pub number_of_adventurers: i32,
+    pub explorer_rank: u32,
+}
+
+impl General {
+    fn load(data: &[u8], active_save_block: ActiveSaveBlock) -> Self {
+        let team_name = load_save_slice(data, active_save_block, general::TEAM_NAME);
+        let held_money = load_save_bits(
+            data.view_bits(),
+            active_save_block,
+            general::HELD_MONEY_BITS,
+        );
+        let sp_episode_held_money = load_save_bits(
+            data.view_bits(),
+            active_save_block,
+            general::SP_EPISODE_HELD_MONEY_BITS,
+        );
+        let stored_money = load_save_bits(
+            data.view_bits(),
+            active_save_block,
+            general::STORED_MONEY_BITS,
+        );
+        let number_of_adventures =
+            load_save_slice(data, active_save_block, general::NUMBER_OF_ADVENTURERS)
+                .try_into()
+                .unwrap();
+        let explorer_rank = load_save_slice(data, active_save_block, general::EXPLORER_RANK)
+            .try_into()
+            .unwrap();
+
+        Self {
+            team_name: PmdString::from(team_name),
+            held_money: held_money.load_le(),
+            sp_episode_held_money: sp_episode_held_money.load_le(),
+            stored_money: stored_money.load_le(),
+            number_of_adventurers: i32::from_le_bytes(number_of_adventures),
+            explorer_rank: u32::from_le_bytes(explorer_rank),
+        }
+    }
+
+    fn save(&self, data: &mut [u8], active_save_block: ActiveSaveBlock) {
+        store_save_slice(
+            data,
+            active_save_block,
+            general::TEAM_NAME,
+            self.team_name.to_save_bytes().as_slice(),
+        );
+
+        store_save_bits(
+            data.view_bits_mut(),
+            active_save_block,
+            general::HELD_MONEY_BITS,
+            &self.held_money.to_le_bytes().view_bits::<Lsb0>()[0..24],
+        );
+        store_save_bits(
+            data.view_bits_mut(),
+            active_save_block,
+            general::SP_EPISODE_HELD_MONEY_BITS,
+            &self.sp_episode_held_money.to_le_bytes().view_bits::<Lsb0>()[0..24],
+        );
+        store_save_bits(
+            data.view_bits_mut(),
+            active_save_block,
+            general::STORED_MONEY_BITS,
+            &self.stored_money.to_le_bytes().view_bits::<Lsb0>()[0..24],
+        );
+        store_save_slice(
+            data,
+            active_save_block,
+            general::NUMBER_OF_ADVENTURERS,
+            &self.number_of_adventurers.to_le_bytes(),
+        );
+        store_save_slice(
+            data,
+            active_save_block,
+            general::EXPLORER_RANK,
+            &self.explorer_rank.to_le_bytes(),
+        );
+    }
 }
 
 #[derive(Debug)]
@@ -32,19 +155,13 @@ pub struct SkySave {
     pub data: Vec<u8>,
     pub active_save_block: ActiveSaveBlock,
     pub quicksave_valid: bool,
+
+    pub general: General,
+    pub stored_pokemon: ArrayVec<StoredPokemon, 720>,
+    pub active_pokemon: ArrayVec<ActivePokemon, 4>,
 }
 
 impl SkySave {
-    fn load_save_slice(&self, range: Range<usize>) -> &[u8] {
-        &self.data[range.start + self.active_save_block as usize
-            ..range.end + self.active_save_block as usize]
-    }
-
-    fn load_save_bits(&self, range: Range<usize>) -> &BitSlice<u8, Lsb0> {
-        &self.data.view_bits()[range.start + self.active_save_block as usize * 8
-            ..range.end + self.active_save_block as usize * 8]
-    }
-
     /// Load and validates the save data from a slice of bytes.
     /// The save data is validated by checking its length and calculating the checksums.
     /// The save file is divided into three blocks: primary, backup, and quicksave.
@@ -82,14 +199,33 @@ impl SkySave {
             });
         }
 
+        let active_save_block = if pri_matches {
+            ActiveSaveBlock::Primary
+        } else {
+            ActiveSaveBlock::Backup
+        };
+
+        let general = General::load(data, active_save_block);
+
+        let bits = load_save_bits(data.view_bits(), active_save_block, stored::STORED_PKM_BITS);
+        let stored_pokemon = bits
+            .chunks(stored::STORED_PKM_BIT_LEN)
+            .map(StoredPokemon::from_bitslice)
+            .collect();
+
+        let bits = load_save_bits(data.view_bits(), active_save_block, active::ACTIVE_PKM_BITS);
+        let active_pokemon = bits
+            .chunks(active::ACTIVE_PKM_BIT_LEN)
+            .map(ActivePokemon::from_bitslice)
+            .collect();
+
         Ok(SkySave {
-            data: data.as_ref().to_vec(),
-            active_save_block: if pri_matches {
-                ActiveSaveBlock::Primary
-            } else {
-                ActiveSaveBlock::Backup
-            },
+            data: data.to_vec(),
+            active_save_block,
             quicksave_valid: quick_matches,
+            general,
+            stored_pokemon,
+            active_pokemon,
         })
     }
 
@@ -99,67 +235,62 @@ impl SkySave {
         Self::from_slice(&data)
     }
 
-    pub fn team_name(&self) -> PmdString {
-        let bytes = self.load_save_slice(general::TEAM_NAME);
-        PmdString::from(bytes)
+    /// Recalculates the checksums for each save block.
+    pub fn fix_checksums(&mut self) {
+        let pri_sum = checksum(&self.data, save::PRIMARY_CHECKSUM);
+        let backup_sum = checksum(&self.data, save::BACKUP_CHECKSUM);
+        let quick_sum = checksum(&self.data, save::QUICKSAVE_CHECKSUM);
+
+        self.data[save::PRIMARY_READ_CHECKSUM].copy_from_slice(&pri_sum);
+        self.data[save::BACKUP_READ_CHECKSUM].copy_from_slice(&backup_sum);
+        self.data[save::QUICKSAVE_READ_CHECKSUM].copy_from_slice(&quick_sum);
     }
 
-    pub fn team_name_until_nul(&self) -> PmdString {
-        let bytes = self.load_save_slice(general::TEAM_NAME);
-        let until = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
-        PmdString::from(&bytes[..until])
-    }
+    pub fn save<P: AsRef<Path>>(&mut self, filename: P) -> Result<(), SaveError> {
+        let active_range = match self.active_save_block {
+            ActiveSaveBlock::Primary => save::PRIMARY_SAVE,
+            ActiveSaveBlock::Backup => save::BACKUP_SAVE,
+        };
 
-    pub fn held_money(&self) -> u32 {
-        let bits = &self
-            .load_save_slice(general::HELD_MONEY)
-            .view_bits::<Lsb0>()[6..30];
-        bits.load_le::<u32>()
-    }
+        let backup = match self.active_save_block {
+            ActiveSaveBlock::Primary => save::BACKUP_SAVE.start,
+            ActiveSaveBlock::Backup => save::PRIMARY_SAVE.start,
+        };
 
-    pub fn sp_episode_held_money(&self) -> u32 {
-        let bits = &self
-            .load_save_slice(general::SP_EPISODE_HELD_MONEY)
-            .view_bits::<Lsb0>()[6..30];
-        bits.load_le::<u32>()
-    }
+        let bv = self.stored_pokemon.iter().map(|p| p.to_bitvec()).fold(
+            BitVec::<u8, Lsb0>::with_capacity(stored::STORED_PKM_BIT_LEN * 4),
+            |mut acc, a| {
+                acc.extend_from_bitslice(&a);
+                acc
+            },
+        );
 
-    pub fn stored_money(&self) -> u32 {
-        let bits = &self
-            .load_save_slice(general::STORED_MONEY)
-            .view_bits::<Lsb0>()[6..30];
-        bits.load_le::<u32>()
-    }
+        store_save_bits(
+            self.data.view_bits_mut(),
+            self.active_save_block,
+            stored::STORED_PKM_BITS,
+            bv.as_bitslice(),
+        );
 
-    pub fn number_of_adventurers(&self) -> i32 {
-        let bytes = self.load_save_slice(general::NUMBER_OF_ADVENTURERS);
-        i32::from_le_bytes(bytes.try_into().unwrap()) // Safe, four bytes.
-    }
+        let bv = self.active_pokemon.iter().map(|p| p.to_bitvec()).fold(
+            BitVec::<u8, Lsb0>::with_capacity(active::ACTIVE_PKM_BIT_LEN * 4),
+            |mut acc, a| {
+                acc.extend_from_bitslice(&a);
+                acc
+            },
+        );
+        store_save_bits(
+            self.data.view_bits_mut(),
+            self.active_save_block,
+            active::ACTIVE_PKM_BITS,
+            bv.as_bitslice(),
+        );
 
-    pub fn explorer_rank(&self) -> u32 {
-        let bytes = self.load_save_slice(general::EXPLORER_RANK);
-        u32::from_le_bytes(bytes.try_into().unwrap()) // Safe, four bytes.
-    }
+        self.general.save(&mut self.data, self.active_save_block);
 
-    pub fn stored_pokemon(&self) -> Box<[StoredPokemon]> {
-        let bits = &self.data.view_bits::<Lsb0>()[stored::STORED_PKM_BITS];
-        bits.chunks(stored::STORED_PKM_BIT_LEN)
-            .map(|c| {
-                let mut data: StoredPokemonBits = bitarr!(u8, Lsb0; 0; 362);
-                data[0..362].copy_from_bitslice(c);
-                StoredPokemon(data)
-            })
-            .collect()
-    }
+        self.data.copy_within(active_range, backup);
+        self.fix_checksums();
 
-    pub fn active_pokemon(&self) -> Box<[ActivePokemon]> {
-        let bits: &BitSlice<u8> = self.load_save_bits(active::ACTIVE_PKM_BITS);
-        bits.chunks(active::ACTIVE_PKM_BIT_LEN)
-            .map(|c| {
-                let mut data: ActivePokemonBits = bitarr!(u8, Lsb0; 0; 546);
-                data[0..546].copy_from_bitslice(c);
-                ActivePokemon(data)
-            })
-            .collect()
+        fs::write(filename, &self.data).map_err(SaveError::Io)
     }
 }
