@@ -2,9 +2,6 @@ use crate::offsets::active::{moves, pokemon, ACTIVE_PKM_BIT_LEN};
 use crate::{IqMapBits, PmdString};
 use bitvec::prelude::*;
 
-pub type ActivePokemonBits = BitArr!(for 546, in u8, Lsb0);
-pub type ActiveMoveBits = BitArr!(for 29, in u8, Lsb0);
-
 #[derive(Debug)]
 pub struct ActiveMove {
     pub valid: bool,
