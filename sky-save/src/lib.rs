@@ -1,5 +1,4 @@
-mod active;
-pub mod consts;
+pub mod active;
 pub mod encoding;
 pub mod error;
 pub mod offsets;

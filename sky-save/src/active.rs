@@ -1,10 +1,15 @@
+//! Handles loading and storing the active Pokémon in the party.
+
 use crate::offsets::active::{moves, pokemon};
 use crate::{IqMapBits, PmdString};
 use bitvec::prelude::*;
 
+/// A static `BitArray` representing the bits of an `ActivePokemon`.
 pub type ActivePokemonBits = BitArr!(for 546, in u8, Lsb0);
+/// A static `BitArray` representing the bits of a `StoredMove`.
 pub type ActiveMoveBits = BitArr!(for 29, in u8, Lsb0);
 
+/// Represents each of the four moves in an `ActivePokemon`.
 #[derive(Debug)]
 pub struct ActiveMove {
     pub valid: bool,
@@ -44,6 +49,7 @@ impl ActiveMove {
     }
 }
 
+/// Represents one of the four active Pokémon in the party.
 #[derive(Debug)]
 pub struct ActivePokemon {
     pub valid: bool,

@@ -1,3 +1,5 @@
+//! Handles loading and storing the stored Pokémon.
+
 use crate::offsets::stored::{moves, pokemon, STORED_PKM_BIT_LEN};
 use crate::PmdString;
 use bitvec::prelude::*;
@@ -5,9 +7,12 @@ use bitvec::BitArr;
 
 pub type IqMapBits = BitArr!(for 69, in u8, Lsb0);
 
+/// A static `BitArray` representing the bits of a `StoredPokemon`.
 pub type StoredPokemonBits = BitArr!(for 362, in u8, Lsb0);
+/// A static `BitArray` representing the bits of a `StoredMove`.
 pub type StoredMoveBits = BitArr!(for 21, in u8, Lsb0);
 
+/// Represents each of the four moves in a `StoredPokemon`.
 #[derive(Debug, Default)]
 pub struct StoredMove {
     pub valid: bool,
@@ -44,6 +49,8 @@ impl StoredMove {
     }
 }
 
+/// Represents a recruited Pokémon in Chimecho's Assembly.
+/// Holds information that isn't critical in dungeon mode.
 #[derive(Debug, Default)]
 pub struct StoredPokemon {
     pub valid: bool,

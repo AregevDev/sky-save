@@ -1,4 +1,5 @@
-//! This module handles strings represented by the PMD character encoding.
+//! Handles strings represented by the PMD character encoding.
+//!
 //! Save file strings have one byte per character and are encoded using a custom character encoding, which is a mix of ASCII, Unicode and special sequences.
 //! Special sequences are wrapped in square brackets.
 //!

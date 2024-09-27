@@ -1,4 +1,5 @@
-use crate::consts::MIN_SAVE_LEN;
+//! Handles loading and storing the save data.
+
 use crate::error::SaveError;
 use crate::offsets::{active, general, save, stored};
 use crate::{ActivePokemon, PmdString, StoredPokemon};
@@ -12,6 +13,9 @@ use std::fs;
 use std::ops::Range;
 use std::path::Path;
 
+/// File size must be at least 128Kib.
+const MIN_SAVE_LEN: usize = 0x20000;
+
 fn checksum(data: &[u8], data_range: Range<usize>) -> [u8; 4] {
     (data[data_range]
         .chunks(4)
@@ -20,7 +24,7 @@ fn checksum(data: &[u8], data_range: Range<usize>) -> [u8; 4] {
         .to_le_bytes()
 }
 
-pub fn load_save_slice(
+fn load_save_slice(
     data: &[u8],
     active_save_block: ActiveSaveBlock,
     range: Range<usize>,
@@ -28,7 +32,7 @@ pub fn load_save_slice(
     &data[range.start + active_save_block as usize..range.end + active_save_block as usize]
 }
 
-pub fn store_save_slice(
+fn store_save_slice(
     data: &mut [u8],
     active_save_block: ActiveSaveBlock,
     range: Range<usize>,
@@ -38,7 +42,7 @@ pub fn store_save_slice(
         .copy_from_slice(value);
 }
 
-pub fn load_save_bits(
+fn load_save_bits(
     data: &BitSlice<u8, Lsb0>,
     active_save_block: ActiveSaveBlock,
     range: Range<usize>,
@@ -46,7 +50,7 @@ pub fn load_save_bits(
     &data[range.start + active_save_block as usize * 8..range.end + active_save_block as usize * 8]
 }
 
-pub fn store_save_bits(
+fn store_save_bits(
     data: &mut BitSlice<u8, Lsb0>,
     active_save_block: ActiveSaveBlock,
     range: Range<usize>,
@@ -56,6 +60,9 @@ pub fn store_save_bits(
         .copy_from_bitslice(value);
 }
 
+
+/// The current active save block.
+/// Holds it's start offset.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(usize)]
 pub enum ActiveSaveBlock {
@@ -63,6 +70,7 @@ pub enum ActiveSaveBlock {
     Backup = save::BACKUP_SAVE.start,
 }
 
+/// Holds general information about the saved game.
 #[derive(Debug)]
 pub struct General {
     pub team_name: PmdString,
@@ -150,6 +158,9 @@ impl General {
     }
 }
 
+/// The main structure of `sky-save`.
+/// Contains the save data bytes and every structure the library parses.
+/// Selectively loads data from the `active_save_block`.
 #[derive(Debug)]
 pub struct SkySave {
     pub data: Vec<u8>,
@@ -170,6 +181,7 @@ impl SkySave {
     /// - Truncate the result to a 32-bit integer.
     /// - Convert the result to little-endian bytes.
     /// - Compare with bytes 0 to 3 to check for validity.
+    /// After validation, every structure is parsed from the save data.
     pub fn from_slice<S: AsRef<[u8]>>(data: S) -> Result<Self, SaveError> {
         let data = data.as_ref();
 
@@ -229,7 +241,7 @@ impl SkySave {
         })
     }
 
-    /// Loads save data from file.
+    /// Loads save data from a file.
     pub fn open<P: AsRef<Path>>(filename: P) -> Result<Self, SaveError> {
         let data = fs::read(filename).map_err(SaveError::Io)?;
         Self::from_slice(&data)
@@ -246,6 +258,7 @@ impl SkySave {
         self.data[save::QUICKSAVE_READ_CHECKSUM].copy_from_slice(&quick_sum);
     }
 
+    /// Saves all changes to `data`. Recalculates the checksums and writes to a file.
     pub fn save<P: AsRef<Path>>(&mut self, filename: P) -> Result<(), SaveError> {
         let active_range = match self.active_save_block {
             ActiveSaveBlock::Primary => save::PRIMARY_SAVE,

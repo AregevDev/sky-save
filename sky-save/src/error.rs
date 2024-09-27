@@ -1,3 +1,5 @@
+//! The library's error type.
+
 use std::io;
 use thiserror::Error;
 
