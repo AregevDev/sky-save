@@ -5,7 +5,10 @@ use bitvec::BitArr;
 
 pub type IqMapBits = BitArr!(for 69, in u8, Lsb0);
 
-#[derive(Debug)]
+pub type StoredPokemonBits = BitArr!(for 362, in u8, Lsb0);
+pub type StoredMoveBits = BitArr!(for 21, in u8, Lsb0);
+
+#[derive(Debug, Default)]
 pub struct StoredMove {
     pub valid: bool,
     pub linked: bool,
@@ -27,8 +30,8 @@ impl StoredMove {
         }
     }
 
-    pub fn to_bitvec(&self) -> BitVec<u8, Lsb0> {
-        let mut bits = bitvec![u8, Lsb0; 0; 21];
+    pub fn to_bits(&self) -> StoredMoveBits {
+        let mut bits = bitarr![u8, Lsb0; 0; 21];
 
         bits.set(moves::VALID, self.valid);
         bits.set(moves::LINKED, self.linked);
@@ -41,7 +44,7 @@ impl StoredMove {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct StoredPokemon {
     pub valid: bool,
     pub level: u8,
@@ -68,42 +71,40 @@ pub struct StoredPokemon {
 }
 
 impl StoredPokemon {
-    pub fn from_bitslice(bits: &BitSlice<u8, Lsb0>) -> Self {
-        let mut iq: IqMapBits = bitarr!(u8, Lsb0; 0; 69);
-        iq[0..69].copy_from_bitslice(&bits[pokemon::IQ_MAP]);
+    pub fn from_bitslice(value: &BitSlice<u8, Lsb0>) -> Self {
+        let mut iq: IqMapBits = bitarr![u8, Lsb0; 0; 69];
+        iq[0..69].copy_from_bitslice(&value[pokemon::IQ_MAP]);
 
-        let mut name_bytes = bits[pokemon::NAME].to_bitvec();
-        name_bytes.force_align();
+        let name_bytes = &value[pokemon::NAME];
 
         Self {
-            valid: bits[pokemon::VALID],
-            level: bits[pokemon::LEVEL].load_le(),
-            id: bits[pokemon::ID].load_le(),
-            met_at: bits[pokemon::MET_AT].load_le(),
-            met_floor: bits[pokemon::MET_FLOOR].load_le(),
-            unknown: bits[pokemon::UNKNOWN],
-            evolved_at_1: bits[pokemon::EVOLVED_AT_1].load_le(),
-            evolved_at_2: bits[pokemon::EVOLVED_AT_2].load_le(),
-            iq: bits[pokemon::IQ].load_le(),
-            hp: bits[pokemon::HP].load_le(),
-            attack: bits[pokemon::ATTACK].load_le(),
-            sp_attack: bits[pokemon::SP_ATTACK].load_le(),
-            defense: bits[pokemon::DEFENSE].load_le(),
-            sp_defense: bits[pokemon::SP_DEFENSE].load_le(),
-            exp: bits[pokemon::EXP].load_le(),
+            valid: value[pokemon::VALID],
+            level: value[pokemon::LEVEL].load_le(),
+            id: value[pokemon::ID].load_le(),
+            met_at: value[pokemon::MET_AT].load_le(),
+            met_floor: value[pokemon::MET_FLOOR].load_le(),
+            unknown: value[pokemon::UNKNOWN],
+            evolved_at_1: value[pokemon::EVOLVED_AT_1].load_le(),
+            evolved_at_2: value[pokemon::EVOLVED_AT_2].load_le(),
+            iq: value[pokemon::IQ].load_le(),
+            hp: value[pokemon::HP].load_le(),
+            attack: value[pokemon::ATTACK].load_le(),
+            sp_attack: value[pokemon::SP_ATTACK].load_le(),
+            defense: value[pokemon::DEFENSE].load_le(),
+            sp_defense: value[pokemon::SP_DEFENSE].load_le(),
+            exp: value[pokemon::EXP].load_le(),
             iq_map: iq,
-            tactic: bits[pokemon::TACTIC].load_le(),
-            move_1: StoredMove::from_bitslice(&bits[pokemon::MOVE_1].to_bitvec()),
-            move_2: StoredMove::from_bitslice(&bits[pokemon::MOVE_2].to_bitvec()),
-            move_3: StoredMove::from_bitslice(&bits[pokemon::MOVE_3].to_bitvec()),
-            move_4: StoredMove::from_bitslice(&bits[pokemon::MOVE_4].to_bitvec()),
-            name: PmdString::from(name_bytes.into_vec().as_slice()),
+            tactic: value[pokemon::TACTIC].load_le(),
+            move_1: StoredMove::from_bitslice(&value[pokemon::MOVE_1]),
+            move_2: StoredMove::from_bitslice(&value[pokemon::MOVE_2]),
+            move_3: StoredMove::from_bitslice(&value[pokemon::MOVE_3]),
+            move_4: StoredMove::from_bitslice(&value[pokemon::MOVE_4]),
+            name: PmdString::from(name_bytes),
         }
     }
 
-    pub fn to_bitvec(&self) -> BitVec<u8, Lsb0> {
-        let mut bits = BitVec::new();
-        bits.resize(STORED_PKM_BIT_LEN, false);
+    pub fn to_bits(&self) -> StoredPokemonBits {
+        let mut bits = bitarr![u8, Lsb0; 0; STORED_PKM_BIT_LEN];
 
         bits.set(pokemon::VALID, self.valid);
         bits[pokemon::LEVEL].store_le(self.level);
@@ -122,11 +123,11 @@ impl StoredPokemon {
         bits[pokemon::EXP].store_le(self.exp);
         bits[pokemon::IQ_MAP].copy_from_bitslice(&self.iq_map[0..69]);
         bits[pokemon::TACTIC].store_le(self.tactic);
-        bits[pokemon::MOVE_1].copy_from_bitslice(self.move_1.to_bitvec().as_bitslice());
-        bits[pokemon::MOVE_2].copy_from_bitslice(self.move_2.to_bitvec().as_bitslice());
-        bits[pokemon::MOVE_3].copy_from_bitslice(self.move_3.to_bitvec().as_bitslice());
-        bits[pokemon::MOVE_4].copy_from_bitslice(self.move_4.to_bitvec().as_bitslice());
-        bits[pokemon::NAME].copy_from_bitslice(self.name.to_save_bytes().view_bits::<Lsb0>());
+        bits[pokemon::MOVE_1].copy_from_bitslice(&self.move_1.to_bits()[0..21]);
+        bits[pokemon::MOVE_2].copy_from_bitslice(&self.move_2.to_bits()[0..21]);
+        bits[pokemon::MOVE_3].copy_from_bitslice(&self.move_3.to_bits()[0..21]);
+        bits[pokemon::MOVE_4].copy_from_bitslice(&self.move_4.to_bits()[0..21]);
+        bits[pokemon::NAME].copy_from_bitslice(self.name.to_save_bytes().view_bits());
 
         bits
     }

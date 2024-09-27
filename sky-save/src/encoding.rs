@@ -9,6 +9,7 @@
 
 use crate::EncodingError;
 use arrayvec::ArrayVec;
+use bitvec::field::BitField;
 use bitvec::order::Lsb0;
 use bitvec::prelude::BitSlice;
 use std::fmt::Display;
@@ -114,10 +115,10 @@ impl From<&[u8]> for PmdString {
 
 impl From<&BitSlice<u8, Lsb0>> for PmdString {
     fn from(value: &BitSlice<u8, Lsb0>) -> Self {
-        let mut bv = value.to_bitvec();
-        bv.force_align();
+        let bytes: u128 = value.load_le();
+        let bytes = bytes.to_le_bytes();
 
-        PmdString::from(&bv.into_vec().as_slice()[0..10])
+        PmdString::from(&bytes.as_slice()[0..10])
     }
 }
 

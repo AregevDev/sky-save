@@ -3,10 +3,10 @@ use crate::error::SaveError;
 use crate::offsets::{active, general, save, stored};
 use crate::{ActivePokemon, PmdString, StoredPokemon};
 use arrayvec::ArrayVec;
+use bitvec::bitarr;
 use bitvec::field::BitField;
 use bitvec::order::Lsb0;
 use bitvec::slice::BitSlice;
-use bitvec::vec::BitVec;
 use bitvec::view::BitView;
 use std::fs;
 use std::ops::Range;
@@ -206,15 +206,15 @@ impl SkySave {
         };
 
         let general = General::load(data, active_save_block);
-
         let bits = load_save_bits(data.view_bits(), active_save_block, stored::STORED_PKM_BITS);
-        let stored_pokemon = bits
+
+        let stored_pokemon: ArrayVec<StoredPokemon, 720> = bits
             .chunks(stored::STORED_PKM_BIT_LEN)
             .map(StoredPokemon::from_bitslice)
             .collect();
 
         let bits = load_save_bits(data.view_bits(), active_save_block, active::ACTIVE_PKM_BITS);
-        let active_pokemon = bits
+        let active_pokemon: ArrayVec<ActivePokemon, 4> = bits
             .chunks(active::ACTIVE_PKM_BIT_LEN)
             .map(ActivePokemon::from_bitslice)
             .collect();
@@ -257,36 +257,48 @@ impl SkySave {
             ActiveSaveBlock::Backup => save::PRIMARY_SAVE.start,
         };
 
-        let bv = self.stored_pokemon.iter().map(|p| p.to_bitvec()).fold(
-            BitVec::<u8, Lsb0>::with_capacity(stored::STORED_PKM_BIT_LEN * 4),
-            |mut acc, a| {
-                acc.extend_from_bitslice(&a);
-                acc
-            },
-        );
+        self.general.save(&mut self.data, self.active_save_block);
 
+        // Saving does not allocate on the heap.
+        let stored = self
+            .stored_pokemon
+            .iter()
+            .map(StoredPokemon::to_bits)
+            .enumerate()
+            .fold(
+                bitarr![u8, Lsb0; 0; stored::STORED_PKM_BIT_LEN * stored::STORED_PKM_COUNT],
+                |mut acc, (idx, a)| {
+                    acc[idx * stored::STORED_PKM_BIT_LEN..(idx + 1) * stored::STORED_PKM_BIT_LEN]
+                        .copy_from_bitslice(&a[0..stored::STORED_PKM_BIT_LEN]);
+                    acc
+                },
+            );
         store_save_bits(
             self.data.view_bits_mut(),
             self.active_save_block,
             stored::STORED_PKM_BITS,
-            bv.as_bitslice(),
+            stored.as_bitslice(),
         );
 
-        let bv = self.active_pokemon.iter().map(|p| p.to_bitvec()).fold(
-            BitVec::<u8, Lsb0>::with_capacity(active::ACTIVE_PKM_BIT_LEN * 4),
-            |mut acc, a| {
-                acc.extend_from_bitslice(&a);
-                acc
-            },
-        );
+        let active = self
+            .active_pokemon
+            .iter()
+            .map(ActivePokemon::to_bits)
+            .enumerate()
+            .fold(
+                bitarr![u8, Lsb0; 0; active::ACTIVE_PKM_BIT_LEN * active::ACTIVE_PKM_COUNT],
+                |mut acc, (idx, a)| {
+                    acc[idx * active::ACTIVE_PKM_BIT_LEN..(idx + 1) * active::ACTIVE_PKM_BIT_LEN]
+                        .copy_from_bitslice(&a[0..active::ACTIVE_PKM_BIT_LEN]);
+                    acc
+                },
+            );
         store_save_bits(
             self.data.view_bits_mut(),
             self.active_save_block,
             active::ACTIVE_PKM_BITS,
-            bv.as_bitslice(),
+            active.as_bitslice(),
         );
-
-        self.general.save(&mut self.data, self.active_save_block);
 
         self.data.copy_within(active_range, backup);
         self.fix_checksums();
