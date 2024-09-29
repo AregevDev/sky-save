@@ -3,6 +3,7 @@
 use std::io;
 use thiserror::Error;
 
+/// An error that can occur when loading a save file.
 #[derive(Debug, Default, Error)]
 pub enum SaveError {
     #[default]
@@ -28,6 +29,7 @@ pub enum SaveError {
     },
 }
 
+/// An error that can occur when encoding or decoding PMD strings.
 #[derive(Debug, Error)]
 pub enum EncodingError {
     #[error("Invalid PMD character: {0}")]

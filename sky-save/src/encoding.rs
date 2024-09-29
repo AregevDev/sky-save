@@ -33,7 +33,7 @@ impl PmdChar {
         let utf8 = match seq.chars().next() {
             Some('[') => pmd as char,
             Some(c) => c,
-            _ => unreachable!(), // Safe, seq is valid and not empty at this point.
+            _ => unreachable!(), // This is safe, seq is valid and not empty at this point.
         };
 
         Ok(PmdChar { pmd, utf8 })
@@ -88,7 +88,7 @@ impl PmdString {
     }
 }
 
-/// Converts a PMD string to a UTF-8 string.
+/// Displays a UTF-8 representation of the `PmdString`.
 /// Does not ignore null bytes.
 impl Display for PmdString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

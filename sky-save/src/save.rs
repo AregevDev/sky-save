@@ -181,6 +181,7 @@ impl SkySave {
     /// - Truncate the result to a 32-bit integer.
     /// - Convert the result to little-endian bytes.
     /// - Compare with bytes 0 to 3 to check for validity.
+    ///
     /// After validation, every structure is parsed from the save data.
     pub fn from_slice<S: AsRef<[u8]>>(data: S) -> Result<Self, SaveError> {
         let data = data.as_ref();
@@ -193,7 +194,6 @@ impl SkySave {
         let backup_read: [u8; 4] = data[save::BACKUP_READ_CHECKSUM].try_into().unwrap(); // Safe, four bytes.
         let quick_read: [u8; 4] = data[save::QUICKSAVE_READ_CHECKSUM].try_into().unwrap(); // Safe, four bytes.
 
-        // 0xB6A isn't divisible by 4. We end up with a reminder of 2 bytes and need to count for them.
         let pri_sum = checksum(data, save::PRIMARY_CHECKSUM);
         let backup_sum = checksum(data, save::BACKUP_CHECKSUM);
         let quick_sum = checksum(data, save::QUICKSAVE_CHECKSUM);
@@ -248,6 +248,7 @@ impl SkySave {
     }
 
     /// Recalculates the checksums for each save block.
+    /// Writes the checksums to the save data.
     pub fn fix_checksums(&mut self) {
         let pri_sum = checksum(&self.data, save::PRIMARY_CHECKSUM);
         let backup_sum = checksum(&self.data, save::BACKUP_CHECKSUM);

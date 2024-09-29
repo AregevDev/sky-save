@@ -1,7 +1,9 @@
+//! Stored Pokemon offsets
+
 use std::ops::Range;
 
-/// Stored Pokemon
 pub const STORED_PKM_BIT_LEN: usize = 362;
+pub const STORED_MOVE_BIT_LEN: usize = 21;
 pub const STORED_PKM_COUNT: usize = 720;
 pub const STORED_PKM_BITS: Range<usize> =
     0x464 * 8..(0x464 * 8 + STORED_PKM_BIT_LEN * STORED_PKM_COUNT);

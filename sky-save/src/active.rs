@@ -1,13 +1,13 @@
 //! Handles loading and storing the active Pokémon in the party.
 
-use crate::offsets::active::{moves, pokemon};
+use crate::offsets::active::{moves, pokemon, ACTIVE_MOVE_BIT_LEN, ACTIVE_PKM_BIT_LEN};
 use crate::{IqMapBits, PmdString};
 use bitvec::prelude::*;
 
 /// A static `BitArray` representing the bits of an `ActivePokemon`.
-pub type ActivePokemonBits = BitArr!(for 546, in u8, Lsb0);
+pub type ActivePokemonBits = BitArr!(for ACTIVE_PKM_BIT_LEN, in u8, Lsb0);
 /// A static `BitArray` representing the bits of a `StoredMove`.
-pub type ActiveMoveBits = BitArr!(for 29, in u8, Lsb0);
+pub type ActiveMoveBits = BitArr!(for ACTIVE_MOVE_BIT_LEN, in u8, Lsb0);
 
 /// Represents each of the four moves in an `ActivePokemon`.
 #[derive(Debug)]
@@ -23,21 +23,21 @@ pub struct ActiveMove {
 }
 
 impl ActiveMove {
-    pub fn from_bitslice(value: &BitSlice<u8, Lsb0>) -> Self {
+    pub fn from_bitslice(bits: &BitSlice<u8, Lsb0>) -> Self {
         Self {
-            valid: value[moves::VALID],
-            linked: value[moves::LINKED],
-            switched: value[moves::SWITCHED],
-            set: value[moves::SET],
-            sealed: value[moves::SEALED],
-            id: value[moves::ID].load_le(),
-            pp: value[moves::PP].load_le(),
-            power_boost: value[moves::POWER_BOOST].load_le(),
+            valid: bits[moves::VALID],
+            linked: bits[moves::LINKED],
+            switched: bits[moves::SWITCHED],
+            set: bits[moves::SET],
+            sealed: bits[moves::SEALED],
+            id: bits[moves::ID].load_le(),
+            pp: bits[moves::PP].load_le(),
+            power_boost: bits[moves::POWER_BOOST].load_le(),
         }
     }
 
     pub fn to_bits(&self) -> ActiveMoveBits {
-        let mut bits = bitarr![u8, Lsb0; 0; 29];
+        let mut bits = bitarr![u8, Lsb0; 0; ACTIVE_MOVE_BIT_LEN];
         bits.set(moves::VALID, self.valid);
         bits.set(moves::LINKED, self.linked);
         bits.set(moves::SWITCHED, self.switched);
@@ -118,7 +118,7 @@ impl ActivePokemon {
     }
 
     pub fn to_bits(&self) -> ActivePokemonBits {
-        let mut bits = bitarr![u8, Lsb0; 0; 546];
+        let mut bits = bitarr![u8, Lsb0; 0; ACTIVE_PKM_BIT_LEN];
 
         bits.set(pokemon::VALID, self.valid);
         bits[pokemon::UNKNOWN_1].store_le(self.unknown_1);
@@ -137,10 +137,10 @@ impl ActivePokemon {
         bits[pokemon::DEFENSE].store_le(self.defense);
         bits[pokemon::SP_DEFENSE].store_le(self.sp_defense);
         bits[pokemon::EXP].store_le(self.exp);
-        bits[pokemon::MOVE_1].copy_from_bitslice(&self.move_1.to_bits()[0..29]);
-        bits[pokemon::MOVE_2].copy_from_bitslice(&self.move_2.to_bits()[0..29]);
-        bits[pokemon::MOVE_3].copy_from_bitslice(&self.move_3.to_bits()[0..29]);
-        bits[pokemon::MOVE_4].copy_from_bitslice(&self.move_4.to_bits()[0..29]);
+        bits[pokemon::MOVE_1].copy_from_bitslice(&self.move_1.to_bits()[0..ACTIVE_MOVE_BIT_LEN]);
+        bits[pokemon::MOVE_2].copy_from_bitslice(&self.move_2.to_bits()[0..ACTIVE_MOVE_BIT_LEN]);
+        bits[pokemon::MOVE_3].copy_from_bitslice(&self.move_3.to_bits()[0..ACTIVE_MOVE_BIT_LEN]);
+        bits[pokemon::MOVE_4].copy_from_bitslice(&self.move_4.to_bits()[0..ACTIVE_MOVE_BIT_LEN]);
         bits[pokemon::UNKNOWN_4].store_le(self.unknown_4);
         bits[pokemon::IQ_MAP].copy_from_bitslice(&self.iq_map[0..69]);
         bits[pokemon::TACTIC].store_le(self.tactic);

@@ -1,6 +1,6 @@
 //! Handles loading and storing the stored Pokémon.
 
-use crate::offsets::stored::{moves, pokemon, STORED_PKM_BIT_LEN};
+use crate::offsets::stored::{moves, pokemon, STORED_MOVE_BIT_LEN, STORED_PKM_BIT_LEN};
 use crate::PmdString;
 use bitvec::prelude::*;
 use bitvec::BitArr;
@@ -8,9 +8,9 @@ use bitvec::BitArr;
 pub type IqMapBits = BitArr!(for 69, in u8, Lsb0);
 
 /// A static `BitArray` representing the bits of a `StoredPokemon`.
-pub type StoredPokemonBits = BitArr!(for 362, in u8, Lsb0);
+pub type StoredPokemonBits = BitArr!(for STORED_PKM_BIT_LEN, in u8, Lsb0);
 /// A static `BitArray` representing the bits of a `StoredMove`.
-pub type StoredMoveBits = BitArr!(for 21, in u8, Lsb0);
+pub type StoredMoveBits = BitArr!(for STORED_MOVE_BIT_LEN, in u8, Lsb0);
 
 /// Represents each of the four moves in a `StoredPokemon`.
 #[derive(Debug, Default)]
@@ -36,7 +36,7 @@ impl StoredMove {
     }
 
     pub fn to_bits(&self) -> StoredMoveBits {
-        let mut bits = bitarr![u8, Lsb0; 0; 21];
+        let mut bits = bitarr![u8, Lsb0; 0; STORED_MOVE_BIT_LEN];
 
         bits.set(moves::VALID, self.valid);
         bits.set(moves::LINKED, self.linked);
@@ -130,10 +130,10 @@ impl StoredPokemon {
         bits[pokemon::EXP].store_le(self.exp);
         bits[pokemon::IQ_MAP].copy_from_bitslice(&self.iq_map[0..69]);
         bits[pokemon::TACTIC].store_le(self.tactic);
-        bits[pokemon::MOVE_1].copy_from_bitslice(&self.move_1.to_bits()[0..21]);
-        bits[pokemon::MOVE_2].copy_from_bitslice(&self.move_2.to_bits()[0..21]);
-        bits[pokemon::MOVE_3].copy_from_bitslice(&self.move_3.to_bits()[0..21]);
-        bits[pokemon::MOVE_4].copy_from_bitslice(&self.move_4.to_bits()[0..21]);
+        bits[pokemon::MOVE_1].copy_from_bitslice(&self.move_1.to_bits()[0..STORED_MOVE_BIT_LEN]);
+        bits[pokemon::MOVE_2].copy_from_bitslice(&self.move_2.to_bits()[0..STORED_MOVE_BIT_LEN]);
+        bits[pokemon::MOVE_3].copy_from_bitslice(&self.move_3.to_bits()[0..STORED_MOVE_BIT_LEN]);
+        bits[pokemon::MOVE_4].copy_from_bitslice(&self.move_4.to_bits()[0..STORED_MOVE_BIT_LEN]);
         bits[pokemon::NAME].copy_from_bitslice(self.name.to_save_bytes().view_bits());
 
         bits

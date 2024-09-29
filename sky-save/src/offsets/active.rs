@@ -1,6 +1,9 @@
+//! Active Pokemon offsets
+
 use std::ops::Range;
 
 pub const ACTIVE_PKM_BIT_LEN: usize = 546;
+pub const ACTIVE_MOVE_BIT_LEN: usize = 29;
 pub const ACTIVE_PKM_COUNT: usize = 4;
 pub const ACTIVE_PKM_BITS: Range<usize> =
     0x83D9 * 8 + 1..(0x83D9 * 8 + 1 + ACTIVE_PKM_BIT_LEN * ACTIVE_PKM_COUNT);
