@@ -10,7 +10,7 @@ pub type ActivePokemonBits = BitArr!(for ACTIVE_PKM_BIT_LEN, in u8, Lsb0);
 pub type ActiveMoveBits = BitArr!(for ACTIVE_MOVE_BIT_LEN, in u8, Lsb0);
 
 /// Represents each of the four moves in an `ActivePokemon`.
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 pub struct ActiveMove {
     pub valid: bool,
     pub linked: bool,
@@ -50,7 +50,7 @@ impl ActiveMove {
 }
 
 /// Represents one of the four active Pokémon in the party.
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 pub struct ActivePokemon {
     pub valid: bool,
     pub unknown_1: u8,

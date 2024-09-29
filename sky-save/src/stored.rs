@@ -13,7 +13,7 @@ pub type StoredPokemonBits = BitArr!(for STORED_PKM_BIT_LEN, in u8, Lsb0);
 pub type StoredMoveBits = BitArr!(for STORED_MOVE_BIT_LEN, in u8, Lsb0);
 
 /// Represents each of the four moves in a `StoredPokemon`.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StoredMove {
     pub valid: bool,
     pub linked: bool,
@@ -51,7 +51,7 @@ impl StoredMove {
 
 /// Represents a recruited Pokémon in Chimecho's Assembly.
 /// Holds information that isn't critical in dungeon mode.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StoredPokemon {
     pub valid: bool,
     pub level: u8,

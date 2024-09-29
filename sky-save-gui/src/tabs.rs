@@ -6,7 +6,7 @@ use eframe::egui::{
 };
 use egui_tiles::{Behavior, TabState, TileId, Tiles, UiResponse};
 use egui_virtual_list::VirtualList;
-use sky_save::{ActiveMove, ActivePokemon, IqMapBits, SkySave, StoredMove, StoredPokemon};
+use sky_save::{ActivePokemon, PmdString, SkySave, StoredPokemon};
 
 #[derive(Debug)]
 pub enum GuiTabState {
@@ -17,159 +17,77 @@ pub enum GuiTabState {
 
 #[derive(Debug, Default)]
 pub struct GeneralTab {
-    team_name_buf: String,
-    held_money: u32,
-    sp_episode_held_money: u32,
-    stored_money: u32,
-    explorer_rank: u32,
-    number_of_adventures: i32,
+    name_buffer: String,
 }
 
 impl GeneralTab {
     pub fn new(save: &mut SkySave) -> Self {
         Self {
-            team_name_buf: save.team_name().to_string(),
-            held_money: save.held_money(),
-            sp_episode_held_money: save.sp_episode_held_money(),
-            stored_money: save.stored_money(),
-            explorer_rank: save.explorer_rank(),
-            number_of_adventures: save.number_of_adventurers(),
+            name_buffer: save.general.team_name.to_string_until_nul(),
         }
     }
 }
 
-pub fn general_ui(state: &mut GeneralTab, ui: &mut Ui, _save: &mut SkySave) {
+pub fn general_ui(state: &mut GeneralTab, ui: &mut Ui, save: &mut SkySave) {
+    save.general.team_name = PmdString::from(state.name_buffer.as_bytes());
+
     ui.heading("General Save Data");
     ui.add_space(16.0);
     ui.horizontal(|ui| {
         ui.label("Team name: ");
         ui.add(
-            TextEdit::singleline(&mut state.team_name_buf)
+            TextEdit::singleline(&mut state.name_buffer)
                 .char_limit(10)
                 .hint_text("Team name"),
         );
     });
+
     ui.horizontal(|ui| {
         ui.label("Held money: ");
-        ui.add(DragValue::new(&mut state.held_money).speed(50.0));
+        ui.add(DragValue::new(&mut save.general.held_money).speed(50.0));
     });
     ui.horizontal(|ui| {
         ui.label("Sp Episode held money: ");
-        ui.add(DragValue::new(&mut state.sp_episode_held_money).speed(50.0));
+        ui.add(DragValue::new(&mut save.general.sp_episode_held_money).speed(50.0));
     });
     ui.horizontal(|ui| {
         ui.label("Stored money: ");
-        ui.add(DragValue::new(&mut state.stored_money).speed(50.0));
+        ui.add(DragValue::new(&mut save.general.stored_money).speed(50.0));
     });
     ui.horizontal(|ui| {
         ui.label("Explorer rank: ");
-        ui.add(DragValue::new(&mut state.explorer_rank).speed(25.0));
+        ui.add(DragValue::new(&mut save.general.explorer_rank).speed(25.0));
     });
     ui.horizontal(|ui| {
         ui.label("Number of adventures: ");
-        ui.add(DragValue::new(&mut state.number_of_adventures).speed(0.25));
+        ui.add(DragValue::new(&mut save.general.number_of_adventures).speed(0.25));
     });
-}
-
-#[derive(Debug)]
-pub struct StoredMoveState {
-    valid: bool,
-    linked: bool,
-    switched: bool,
-    set: bool,
-    id: u16,
-    power_boost: u8,
-}
-
-impl StoredMoveState {
-    pub fn from_stored(stored: &StoredMove) -> Self {
-        Self {
-            valid: stored.valid(),
-            linked: stored.linked(),
-            switched: stored.switched(),
-            set: stored.set(),
-            id: stored.id(),
-            power_boost: stored.power_boost(),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct StoredPokemonState {
-    valid: bool,
-    level: u8,
-    id: u16,
-    met_at: u8,
-    met_floor: u8,
-    evolved_at: (u8, u8),
-    iq: u16,
-    hp: u16,
-    attack: u8,
-    sp_attack: u8,
-    defense: u8,
-    sp_defense: u8,
-    exp: u32,
-    iq_map: IqMapBits,
-    tactic: u8,
-    moves: [StoredMoveState; 4],
-    name: String,
-}
-
-impl StoredPokemonState {
-    pub fn from_stored(stored: &StoredPokemon) -> Self {
-        let moves = stored.moves();
-        Self {
-            valid: stored.valid(),
-            level: stored.level(),
-            id: stored.id(),
-            met_at: stored.met_at(),
-            met_floor: stored.met_floor(),
-            evolved_at: stored.evolved_at(),
-            iq: stored.iq(),
-            hp: stored.hp(),
-            attack: stored.attack(),
-            sp_attack: stored.sp_attack(),
-            defense: stored.defense(),
-            sp_defense: stored.sp_defense(),
-            exp: stored.exp(),
-            iq_map: stored.iq_map(),
-            tactic: stored.tactic(),
-            moves: [
-                StoredMoveState::from_stored(&moves[0]),
-                StoredMoveState::from_stored(&moves[1]),
-                StoredMoveState::from_stored(&moves[2]),
-                StoredMoveState::from_stored(&moves[3]),
-            ],
-            name: stored.name_until_nul().to_sequence(),
-        }
-    }
 }
 
 #[derive(Debug)]
 pub struct StoredPokemonTab {
     list: VirtualList,
     current: usize,
-    stored: Box<[StoredPokemon]>,
-    item_state: StoredPokemonState,
+    item_state: StoredPokemon,
+    name_buffer: String,
 }
 
 impl StoredPokemonTab {
     pub fn new(save: &mut SkySave) -> Self {
-        let stored = save.stored_pokemon();
         let current = 0;
-        let item_state = StoredPokemonState::from_stored(&stored[current]);
+        let stored = save.stored_pokemon[current].clone();
+        let name_buffer = save.stored_pokemon[current].name.to_string_until_nul();
 
         Self {
-            stored,
             list: VirtualList::new(),
             current,
-            item_state,
+            item_state: stored,
+            name_buffer,
         }
     }
 }
 
-//noinspection ALL
-pub fn stored_ui(state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave) {
+pub fn stored_ui(state: &mut StoredPokemonTab, ui: &mut Ui, save: &mut SkySave) {
     ui.heading("Stored Pokemon");
     ui.add_space(16.0);
     ui.horizontal_top(|ui| {
@@ -178,7 +96,7 @@ pub fn stored_ui(state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave)
                 ui.set_width(128.0);
                 state
                     .list
-                    .ui_custom_layout(ui, state.stored.len(), |ui, index| {
+                    .ui_custom_layout(ui, save.stored_pokemon.len(), |ui, index| {
                         egui::Frame::canvas(ui.style())
                             .outer_margin(Margin {
                                 right: 16.0,
@@ -189,9 +107,11 @@ pub fn stored_ui(state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave)
                                     Layout::top_down(Align::Min).with_cross_justify(true),
                                     |ui| {
                                         let selected = index == state.current;
-                                        let text = if state.stored[index].valid() {
+                                        let text = if save.stored_pokemon[index].valid {
                                             RichText::new(
-                                                state.stored[index].name_until_nul().to_sequence(),
+                                                save.stored_pokemon[index]
+                                                    .name
+                                                    .to_string_until_nul(),
                                             )
                                         } else {
                                             RichText::new("[Empty]")
@@ -200,9 +120,9 @@ pub fn stored_ui(state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave)
 
                                         if ui.selectable_label(selected, text).clicked() {
                                             state.current = index;
-                                            state.item_state = StoredPokemonState::from_stored(
-                                                &state.stored[index],
-                                            );
+                                            state.item_state = save.stored_pokemon[index].clone();
+                                            state.name_buffer =
+                                                state.item_state.name.to_string_until_nul()
                                         }
                                     },
                                 );
@@ -214,6 +134,9 @@ pub fn stored_ui(state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave)
         ui.separator();
         ui.vertical(|ui| {
             ScrollArea::vertical().id_source("scroll2").show(ui, |ui| {
+                save.stored_pokemon[state.current].name =
+                    PmdString::from(state.name_buffer.as_bytes());
+
                 ui.horizontal(|ui| {
                     ui.label("Valid: ");
                     ui.checkbox(&mut state.item_state.valid, "");
@@ -225,7 +148,7 @@ pub fn stored_ui(state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave)
                     });
                     ui.horizontal(|ui| {
                         ui.label("Name: ");
-                        ui.add(TextEdit::singleline(&mut state.item_state.name).char_limit(10));
+                        ui.add(TextEdit::singleline(&mut state.name_buffer).char_limit(10));
                     });
                     CollapsingHeader::new("Details")
                         .id_source("details")
@@ -249,10 +172,10 @@ pub fn stored_ui(state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave)
                             ui.horizontal(|ui| {
                                 ui.label("Evolved at: ");
                                 ui.add(
-                                    DragValue::new(&mut state.item_state.evolved_at.0).speed(1.0),
+                                    DragValue::new(&mut state.item_state.evolved_at_1).speed(1.0),
                                 );
                                 ui.add(
-                                    DragValue::new(&mut state.item_state.evolved_at.1).speed(1.0),
+                                    DragValue::new(&mut state.item_state.evolved_at_2).speed(1.0),
                                 );
                             });
                         });
@@ -289,7 +212,13 @@ pub fn stored_ui(state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave)
                     CollapsingHeader::new("Moves")
                         .id_source("moves")
                         .show_unindented(ui, |ui| {
-                            for m in state.item_state.moves.iter_mut() {
+                            let moves = [
+                                &mut state.item_state.move_1,
+                                &mut state.item_state.move_2,
+                                &mut state.item_state.move_3,
+                                &mut state.item_state.move_4,
+                            ];
+                            for m in moves {
                                 ui.horizontal(|ui| {
                                     ui.label("ID: ");
                                     ui.add(DragValue::new(&mut m.id).speed(1.0));
@@ -317,108 +246,29 @@ pub fn stored_ui(state: &mut StoredPokemonTab, ui: &mut Ui, _save: &mut SkySave)
 }
 
 #[derive(Debug)]
-pub struct ActiveMoveState {
-    valid: bool,
-    linked: bool,
-    switched: bool,
-    set: bool,
-    sealed: bool,
-    id: u16,
-    pp: u8,
-    power_boost: u8,
-}
-
-impl ActiveMoveState {
-    pub fn from_active(active: &ActiveMove) -> Self {
-        Self {
-            valid: active.valid(),
-            linked: active.linked(),
-            switched: active.switched(),
-            set: active.set(),
-            sealed: active.sealed(),
-            id: active.id(),
-            pp: active.pp(),
-            power_boost: active.power_boost(),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct ActivePokemonState {
-    valid: bool,
-    level: u8,
-    met_at: u8,
-    met_floor: u8,
-    iq: u16,
-    roaster_number: u16,
-    id: u16,
-    current_hp: u16,
-    max_hp: u16,
-    attack: u8,
-    sp_attack: u8,
-    defense: u8,
-    sp_defense: u8,
-    exp: u32,
-    moves: [ActiveMoveState; 4],
-    iq_map: IqMapBits,
-    tactic: u8,
-    name: String,
-}
-
-impl ActivePokemonState {
-    pub fn from_active(active: &ActivePokemon) -> Self {
-        Self {
-            valid: active.valid(),
-            level: active.level(),
-            met_at: active.met_at(),
-            met_floor: active.met_floor(),
-            iq: active.iq(),
-            roaster_number: active.roaster_number(),
-            id: active.id(),
-            current_hp: active.current_hp(),
-            max_hp: active.max_hp(),
-            attack: active.attack(),
-            sp_attack: active.sp_attack(),
-            defense: active.defense(),
-            sp_defense: active.sp_defense(),
-            exp: active.exp(),
-            moves: [
-                ActiveMoveState::from_active(&active.moves()[0]),
-                ActiveMoveState::from_active(&active.moves()[1]),
-                ActiveMoveState::from_active(&active.moves()[2]),
-                ActiveMoveState::from_active(&active.moves()[3]),
-            ],
-            iq_map: active.iq_map(),
-            tactic: active.tactic(),
-            name: active.name_until_nul().to_sequence(),
-        }
-    }
-}
-
-#[derive(Debug)]
 pub struct ActivePokemonTab {
     list: VirtualList,
     current: usize,
-    active: Box<[ActivePokemon]>,
-    item_state: ActivePokemonState,
+    item_state: ActivePokemon,
+    name_buffer: String,
 }
 
 impl ActivePokemonTab {
     pub fn new(save: &mut SkySave) -> Self {
-        let active = save.active_pokemon();
         let current = 0;
-        let item_state = ActivePokemonState::from_active(&active[current]);
+        let item_state = save.active_pokemon[current].clone();
+        let name_buffer = save.active_pokemon[current].name.to_string_until_nul();
 
         Self {
-            active,
             list: VirtualList::new(),
             current,
             item_state,
+            name_buffer,
         }
     }
 }
 
-pub fn active_ui(state: &mut ActivePokemonTab, ui: &mut Ui, _save: &mut SkySave) {
+pub fn active_ui(state: &mut ActivePokemonTab, ui: &mut Ui, save: &mut SkySave) {
     ui.heading("Active Pokemon");
     ui.add_space(16.0);
     ui.horizontal_top(|ui| {
@@ -427,7 +277,7 @@ pub fn active_ui(state: &mut ActivePokemonTab, ui: &mut Ui, _save: &mut SkySave)
                 ui.set_width(128.0);
                 state
                     .list
-                    .ui_custom_layout(ui, state.active.len(), |ui, index| {
+                    .ui_custom_layout(ui, save.active_pokemon.len(), |ui, index| {
                         egui::Frame::canvas(ui.style())
                             .outer_margin(Margin {
                                 right: 16.0,
@@ -438,9 +288,11 @@ pub fn active_ui(state: &mut ActivePokemonTab, ui: &mut Ui, _save: &mut SkySave)
                                     Layout::top_down(Align::Min).with_cross_justify(true),
                                     |ui| {
                                         let selected = index == state.current;
-                                        let text = if state.active[index].valid() {
+                                        let text = if save.active_pokemon[index].valid {
                                             RichText::new(
-                                                state.active[index].name_until_nul().to_sequence(),
+                                                save.active_pokemon[index]
+                                                    .name
+                                                    .to_string_until_nul(),
                                             )
                                         } else {
                                             RichText::new("[Empty]")
@@ -449,9 +301,9 @@ pub fn active_ui(state: &mut ActivePokemonTab, ui: &mut Ui, _save: &mut SkySave)
 
                                         if ui.selectable_label(selected, text).clicked() {
                                             state.current = index;
-                                            state.item_state = ActivePokemonState::from_active(
-                                                &state.active[index],
-                                            );
+                                            state.item_state = save.active_pokemon[index].clone();
+                                            state.name_buffer =
+                                                state.item_state.name.to_string_until_nul()
                                         }
                                     },
                                 );
@@ -462,6 +314,8 @@ pub fn active_ui(state: &mut ActivePokemonTab, ui: &mut Ui, _save: &mut SkySave)
         });
         ui.separator();
         ui.vertical(|ui| {
+            save.active_pokemon[state.current].name = PmdString::from(state.name_buffer.as_bytes());
+
             ScrollArea::vertical().id_source("scroll2").show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label("Valid: ");
@@ -474,7 +328,7 @@ pub fn active_ui(state: &mut ActivePokemonTab, ui: &mut Ui, _save: &mut SkySave)
                     });
                     ui.horizontal(|ui| {
                         ui.label("Name: ");
-                        ui.add(TextEdit::singleline(&mut state.item_state.name).char_limit(10));
+                        ui.add(TextEdit::singleline(&mut state.name_buffer).char_limit(10));
                     });
                     CollapsingHeader::new("Details")
                         .id_source("details")
@@ -539,7 +393,14 @@ pub fn active_ui(state: &mut ActivePokemonTab, ui: &mut Ui, _save: &mut SkySave)
                     CollapsingHeader::new("Moves")
                         .id_source("moves")
                         .show_unindented(ui, |ui| {
-                            for m in state.item_state.moves.iter_mut() {
+                            let moves = [
+                                &mut state.item_state.move_1,
+                                &mut state.item_state.move_2,
+                                &mut state.item_state.move_3,
+                                &mut state.item_state.move_4,
+                            ];
+
+                            for m in moves {
                                 ui.horizontal(|ui| {
                                     ui.label("ID: ");
                                     ui.add(DragValue::new(&mut m.id).speed(1.0));

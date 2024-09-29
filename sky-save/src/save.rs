@@ -24,11 +24,7 @@ fn checksum(data: &[u8], data_range: Range<usize>) -> [u8; 4] {
         .to_le_bytes()
 }
 
-fn load_save_slice(
-    data: &[u8],
-    active_save_block: ActiveSaveBlock,
-    range: Range<usize>,
-) -> &[u8] {
+fn load_save_slice(data: &[u8], active_save_block: ActiveSaveBlock, range: Range<usize>) -> &[u8] {
     &data[range.start + active_save_block as usize..range.end + active_save_block as usize]
 }
 
@@ -60,7 +56,6 @@ fn store_save_bits(
         .copy_from_bitslice(value);
 }
 
-
 /// The current active save block.
 /// Holds it's start offset.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -77,7 +72,7 @@ pub struct General {
     pub held_money: u32,
     pub sp_episode_held_money: u32,
     pub stored_money: u32,
-    pub number_of_adventurers: i32,
+    pub number_of_adventures: i32,
     pub explorer_rank: u32,
 }
 
@@ -112,7 +107,7 @@ impl General {
             held_money: held_money.load_le(),
             sp_episode_held_money: sp_episode_held_money.load_le(),
             stored_money: stored_money.load_le(),
-            number_of_adventurers: i32::from_le_bytes(number_of_adventures),
+            number_of_adventures: i32::from_le_bytes(number_of_adventures),
             explorer_rank: u32::from_le_bytes(explorer_rank),
         }
     }
@@ -147,7 +142,7 @@ impl General {
             data,
             active_save_block,
             general::NUMBER_OF_ADVENTURERS,
-            &self.number_of_adventurers.to_le_bytes(),
+            &self.number_of_adventures.to_le_bytes(),
         );
         store_save_slice(
             data,
