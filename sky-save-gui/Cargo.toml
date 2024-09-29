@@ -3,6 +3,7 @@ name = "sky-save-gui"
 version = "0.0.0"
 edition = "2021"
 description = "A save file editor for Pokemon Mystery Dungeon - Explorers of Sky."
+build = "build.rs"
 authors = ["AregevDev <aregevdev@gmail.com>"]
 repository = "https://github.com/AregevDev/sky-save"
 license = "Apache-2.0"
@@ -10,4 +11,14 @@ readme = "../README.md"
 
 [dependencies]
 sky-save = { path = "../sky-save" }
-cushy = { version = "0.4.0" }
+eframe = { version = "0.28.1", features = ["wgpu"] }
+egui_extras = { version = "0.28.1" }
+egui_tiles = "0.9.1"
+egui_virtual_list = "0.4.0"
+rfd = "0.15.0"
+
+[build-dependencies]
+built = { version = "0.7.4", features = ["git2"] }
+
+[target.'cfg(target_os = "windows")'.build-dependencies]
+winres = "0.1.12"
