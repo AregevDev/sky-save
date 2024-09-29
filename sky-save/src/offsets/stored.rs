@@ -1,7 +1,9 @@
+//! Stored Pokemon offsets
+
 use std::ops::Range;
 
-/// Stored Pokemon
 pub const STORED_PKM_BIT_LEN: usize = 362;
+pub const STORED_MOVE_BIT_LEN: usize = 21;
 pub const STORED_PKM_COUNT: usize = 720;
 pub const STORED_PKM_BITS: Range<usize> =
     0x464 * 8..(0x464 * 8 + STORED_PKM_BIT_LEN * STORED_PKM_COUNT);
@@ -14,7 +16,7 @@ pub mod pokemon {
     pub const ID: Range<usize> = 8..19;
     pub const MET_AT: Range<usize> = 19..27;
     pub const MET_FLOOR: Range<usize> = 27..34;
-    // Bit 34 is unknown
+    pub const UNKNOWN: usize = 34;
     pub const EVOLVED_AT_1: Range<usize> = 35..42;
     pub const EVOLVED_AT_2: Range<usize> = 42..49;
     pub const IQ: Range<usize> = 49..59;

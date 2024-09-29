@@ -27,6 +27,7 @@ pub const ICON_BYTES: &[u8] = include_bytes!("../res/icon.rgba").as_slice();
 #[derive(Debug)]
 enum Message {
     SaveFileOpened { filepath: PathBuf },
+    SaveFileSavedAs { filepath: PathBuf },
 }
 
 #[derive(Debug, Default)]
@@ -71,7 +72,22 @@ impl SkySaveGui {
         });
     }
 
-    pub fn open_save(&mut self, path: PathBuf) {
+    pub fn save_dialog(&mut self, callback_tx: Sender<Message>) {
+        thread::spawn(move || {
+            let path = rfd::FileDialog::new()
+                .add_filter("PMD EoS Saves", &["sav", "dsv"])
+                .set_title("Save save file as")
+                .save_file();
+
+            if let Some(filepath) = path {
+                callback_tx
+                    .send(Message::SaveFileSavedAs { filepath })
+                    .unwrap();
+            }
+        });
+    }
+
+    pub fn do_open(&mut self, path: PathBuf) {
         match SkySave::open(&path) {
             Ok(mut s) => {
                 self.tabs = Some(self.build_tabs(&mut s));
@@ -80,6 +96,17 @@ impl SkySaveGui {
             }
             Err(e) => {
                 eprintln!("{:?}", e);
+            }
+        }
+    }
+
+    pub fn do_save(&mut self, path: PathBuf) {
+        if let Some(ref mut save) = self.state.save {
+            match save.save(&path) {
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                }
             }
         }
     }
@@ -119,13 +146,21 @@ impl SkySaveGui {
 
 impl App for SkySaveGui {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-        TopBottomPanel::top("Top").show(ctx, |ui| {
+        TopBottomPanel::top("top").show(ctx, |ui| {
             ui.menu_button("File", |ui| {
                 if ui.button("Open").clicked() {
                     let tx = self.message_ch.0.clone();
                     self.open_dialog(tx);
                     ui.close_menu();
                 }
+
+                ui.add_enabled_ui(self.state.filepath.is_some(), |ui| {
+                    if ui.button("Save As").clicked() {
+                        let tx = self.message_ch.0.clone();
+                        self.save_dialog(tx);
+                        ui.close_menu();
+                    }
+                });
 
                 if ui.button("Quit").clicked() {
                     ctx.send_viewport_cmd(ViewportCommand::Close);
@@ -136,12 +171,13 @@ impl App for SkySaveGui {
         CentralPanel::default().show(ctx, |ui| {
             if let Some(sv) = ctx.input(|st| st.raw.dropped_files.clone()).first() {
                 let path = sv.path.clone().unwrap();
-                self.open_save(path);
+                self.do_open(path);
             }
 
             if let Ok(msg) = self.message_ch.1.try_recv() {
                 match msg {
-                    Message::SaveFileOpened { filepath } => self.open_save(filepath),
+                    Message::SaveFileOpened { filepath } => self.do_open(filepath),
+                    Message::SaveFileSavedAs { filepath } => self.do_save(filepath),
                 }
             }
 
