@@ -1,8 +1,8 @@
 use eframe::egui;
 use eframe::egui::{
     containers, vec2, Align, CentralPanel, CollapsingHeader, Color32, DragValue, Id, Layout,
-    Margin, Response, RichText, ScrollArea, Sense, Stroke, TextEdit, TextStyle, Ui, Vec2,
-    WidgetText,
+    Margin, Response, RichText, ScrollArea, Sense, Stroke, TextEdit, TextStyle, TopBottomPanel, Ui,
+    Vec2, WidgetText,
 };
 use egui_tiles::{Behavior, TabState, TileId, Tiles, UiResponse};
 use egui_virtual_list::VirtualList;
@@ -241,6 +241,17 @@ pub fn stored_ui(state: &mut StoredPokemonTab, ui: &mut Ui, save: &mut SkySave) 
                         });
                 });
             });
+
+            if let 2..5 = state.current {
+                TopBottomPanel::bottom("warning").show_separator_line(false).show_inside(ui, |ui| {
+                    ui.label(
+                        RichText::new(
+                            "Warning:\nThis slot is reserved for special episodes.\nEditing can cause unexpected behavior.",
+                        )
+                            .color(ui.style().visuals.warn_fg_color),
+                    );
+                });
+            };
         });
     });
 }

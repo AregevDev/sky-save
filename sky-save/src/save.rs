@@ -163,7 +163,7 @@ pub struct SkySave {
     pub quicksave_valid: bool,
 
     pub general: General,
-    pub stored_pokemon: ArrayVec<StoredPokemon, 720>,
+    pub stored_pokemon: ArrayVec<StoredPokemon, 550>,
     pub active_pokemon: ArrayVec<ActivePokemon, 4>,
 }
 
@@ -215,7 +215,7 @@ impl SkySave {
         let general = General::load(data, active_save_block);
         let bits = load_save_bits(data.view_bits(), active_save_block, stored::STORED_PKM_BITS);
 
-        let stored_pokemon: ArrayVec<StoredPokemon, 720> = bits
+        let stored_pokemon: ArrayVec<StoredPokemon, 550> = bits
             .chunks(stored::STORED_PKM_BIT_LEN)
             .map(StoredPokemon::from_bitslice)
             .collect();
@@ -282,11 +282,12 @@ impl SkySave {
                     acc
                 },
             );
+
         store_save_bits(
             self.data.view_bits_mut(),
             self.active_save_block,
             stored::STORED_PKM_BITS,
-            stored.as_bitslice(),
+            &stored.as_bitslice()[0..stored::STORED_PKM_BIT_LEN * stored::STORED_PKM_COUNT],
         );
 
         let active = self
@@ -302,6 +303,7 @@ impl SkySave {
                     acc
                 },
             );
+
         store_save_bits(
             self.data.view_bits_mut(),
             self.active_save_block,

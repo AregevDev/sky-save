@@ -51,6 +51,11 @@ impl StoredMove {
 
 /// Represents a recruited Pokémon in Chimecho's Assembly.
 /// Holds information that isn't critical in dungeon mode.
+///
+/// There are 550 available slots.
+/// Slots 0-1 are reserved for the player and partner.
+/// Slots 2-4 are reserved for Pokemon from special episodes, they aren't available in the main story.
+/// Slots five onwards are available for recruited Pokemon.
 #[derive(Debug, Default, Clone)]
 pub struct StoredPokemon {
     pub valid: bool,
